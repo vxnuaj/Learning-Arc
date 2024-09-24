@@ -40,8 +40,8 @@ Questions? Message me on [X (formerly twitter) @ vxnuaj](https://x.com/vxnuaj)!
 
 > *I wrote this on my own, with the help of resources + GPT. Take it all with a grain of salt.*
 
-<details><summary>**ChangeLog**</summary>
-<details><summary>**09/23/2024**</summary>
+<details><summary>ChangeLog</summary>
+<details><summary>09/23/2024</summary>
         
 After feedback from a research engineer at XAI, reframed my entire process. 
         
