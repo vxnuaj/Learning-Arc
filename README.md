@@ -36,9 +36,19 @@ Questions? Message me on [X (formerly twitter) @ vxnuaj](https://x.com/vxnuaj)!
 
 ## Path
 
-*Last updated 9/21/2024*
+*Last updated 9/23/2024*
 
 > *I wrote this on my own, with the help of resources + GPT. Take it all with a grain of salt.*
+
+<details><summary>**ChangeLog**</summary>
+<details><summary>**09/23/2024**</summary>
+        
+After feedback from a research engineer at XAI, reframed my entire process. 
+        
+Thank god X exists.
+        
+</detils>
+
 
 <details><summary> Resources </summary>
 
