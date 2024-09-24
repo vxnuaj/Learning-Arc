@@ -48,6 +48,7 @@ After feedback from a research engineer at XAI, reframed my entire process.
 Thank god X exists.
         
 </details>
+</details>
 
 
 <details><summary> Resources </summary>
