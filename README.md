@@ -1,5 +1,5 @@
 <div style="height: 200px; overflow: hidden;">
-  <img src="img/spaceart.jpg" style="width: 100%; height: 100%; object-fit: cover;">
+  <img src="img/space.png" style="width: 100%; height: 100%; object-fit: cover;">
 </div>
 
 # Learning Arc
