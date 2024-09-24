@@ -12,13 +12,27 @@ PLEASE - if you see any slop, my errata, please raise an issue or create a pull 
 
 Questions? Message me on [X (formerly twitter) @ vxnuaj](https://x.com/vxnuaj)!
 
+## Nav
+
 - [Learning Arc](#learning-arc)
+  - [Nav](#nav)
+  - [Index](#index)
   - [Path](#path)
     - [Recap to Neural Networks](#recap-to-neural-networks)
     - [**CNNs**](#cnns)
     - [RNNs](#rnns)
     - [Attention \& Transformers](#attention--transformers)
-  - [Index](#index)
+
+
+## Index
+
+1. [Intro / Recap to Neural Networks](intro-to-nnet)
+   1. [NOTES | NYU Lecture: History, motivation, and evolution of Deep Learning](intro-to-nnet/01-nyu-1.md)
+   2. [NOTES | Chapter 3 of Understanding Deep Learning](intro-to-nnet/02-Chap3UDL.md)
+   3. [NOTES | Chapter 4 of Understanding Deep Learning](intro-to-nnet/03-Chap4UDL.md)
+   4. [NOTES | Chapter 5 of Understanding Deep Learning](intro-to-nnet/04-Chap5UDL.md)
+   5. [IMPLEMENTATION | Neural Net from Scratch in Jax](intro-to-nnet/06-nn-jax.py)
+   6. [IMPLEMENTATION | Neural Net from Scratch in NumPy](intro-to-nnet/06-nn-np.py)
 
 ## Path
 
@@ -437,12 +451,3 @@ https://atcold.github.io/NYU-DLSP20/
 
 
 
-## Index
-
-1. [Intro / Recap to Neural Networks](intro-to-nnet)
-   1. [NOTES | NYU Lecture: History, motivation, and evolution of Deep Learning](intro-to-nnet/01-nyu-1.md)
-   2. [NOTES | Chapter 3 of Understanding Deep Learning](intro-to-nnet/02-Chap3UDL.md)
-   3. [NOTES | Chapter 4 of Understanding Deep Learning](intro-to-nnet/03-Chap4UDL.md)
-   4. [NOTES | Chapter 5 of Understanding Deep Learning](intro-to-nnet/04-Chap5UDL.md)
-   5. [IMPLEMENTATION | Neural Net from Scratch in Jax](intro-to-nnet/06-nn-jax.py)
-   6. [IMPLEMENTATION | Neural Net from Scratch in NumPy](intro-to-nnet/06-nn-np.py)
