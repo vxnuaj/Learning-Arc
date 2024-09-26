@@ -33,6 +33,15 @@ Saddle points get worse as we begin operating in higher $n$-dimensional spaces, 
 
 Given a function $f(x, y) = x^2 - y^2$, it has a saddle point at $0, 0$.
 
+The input to this function is a vector in $\mathbb{R}^2$, therefore it's Hessian matrix (see [other notes](#other-notes)), will have $2$ eigenvalues.
+
+When the eigenvalues for the Hessian matrix of the function, are positive where the gradient is $0$, we have a local minima. This is as positive eigenvalues indicate an increasing 1st order partial derivative. But we have a flat, zero-gradient, so therefore we've reached at least a local minima, if not a global minima, a flat point in a convex region.
+
+On the other hand, when the eigenvalues for the Hessian matrix of the function are negative, (meaning the Hessian is negative semi-definite), at a point where we have a $0$ gradient, we've reached at least a local maxima if not a global maxima, indicating a flat point in a concave region.
+
+### 12.1.3 Vanishing Gradients
+
+$Tanh$ is a horrible function for deep models. Plug in a very large or negative $x$ to the function, take the gradient, and see why.
 
 ### Other Notes
 
@@ -59,11 +68,11 @@ To solve for eigenvectors and eigenvalues:
 
 1. Find the characteristic polynomial, via $det(A - \lambda I)$
 2. Solve for each $\lambda$ in the characteristic polynomial
-3. Solve for each eigenvector, $v$, by plugging $\lambda$ into $A - \lambda I$
+3. Solve for each eigenvector, $v$, by plugging $\lambda$ into $A - \lambda I = 0$
 
 and to finally perform eigendecomposition, $A = V\Lambda V^-1$:
 
-1. Plug in each eigenvalue into the diagonal matrix, $\Lambda$.
+1. Plug in each eigenvalue into the diagonal matrix, $\Lambda$ into the diagonal components.
 2. Plug in the corresponding eigenvector to each column vector in $\Lambda$, they must be same indices. Index of eigenvalue column in $\Lambda$ must be the same as index of eigenvector in $V$.
 
 #### **Higher Order Partial Derivatives**
@@ -91,12 +100,18 @@ Given a function $f(x_1, ..., x_n)$, the structure of $H(f)$ is as:
 
 $H(f) = \begin{pmatrix} \frac{\partial^2 f}{\partial x_1^2} & \frac{\partial^2 f}{\partial x_1 \partial x_2} & \cdots & \frac{\partial^2 f}{\partial x_1 \partial x_n} \\ \frac{\partial^2 f}{\partial x_2 \partial x_1} & \frac{\partial^2 f}{\partial x_2^2} & \cdots & \frac{\partial^2 f}{\partial x_2 \partial x_n} \\ \vdots & \vdots & \ddots & \vdots \\ \frac{\partial^2 f}{\partial x_n \partial x_1} & \frac{\partial^2 f}{\partial x_n \partial x_2} & \cdots & \frac{\partial^2 f}{\partial x_n^2} \end{pmatrix}$
 
-
-**NOTATION:**
+> **NOTATION:**
 
 In $\frac{∂^2f}{∂x_m∂x_n}$, we computed $\frac{∂f}{∂x_n}$ first.
 
 The $∂$ w.r.t **right most** term is comptued first.
+
+> For an n by n matrix, there will be n eigenvalues.
+
+For a given loss function, it is desired that we have a positive semi-definite Hessian matrix, it's eigenvalues being 0, indicating that the function is convex.
+
+
+
 
 **PROPERTIES**
 

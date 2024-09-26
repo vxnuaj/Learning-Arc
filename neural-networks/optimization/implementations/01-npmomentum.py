@@ -1,25 +1,3 @@
-'''
-Neural Network Class.
-
-Assumes multi-class classification and hidden layer activation to be leaky relu
-
-Input dims: (n_samples, n_features).T
-Output dims: (n_samples, n_preds)
-
-QUICK RUN ON FASHION-MNIST!
-
-TRAINING:
-
-Total Training Time: 47.92387294769287 seconds
-Alpha: .1
-Epochs: 500, full batch.
-EPOCH -- 500 | ACCURACY -- 82.94333333333334% | CROSS ENTROPY LOSS -- 0.49461299180984497
-
-TESTING:
-
-Test Accuracy: 83.00833333333333
-Test Cross Entropy: 0.4891785979270935
-'''
 
 import numpy as np
 import jax as jx
@@ -42,11 +20,12 @@ class NN:
         self.__key = None
         self.seed = seed
     
-    def train(self, X_train, Y_train, nn_capacity:dict, alpha = .01, epochs = 250, Y_onehot = None, load_params = False, return_params = True, save_params = False): # save params to save parameters to directory, as pkl file.
+    def train(self, X_train, Y_train, nn_capacity:dict, alpha = .01, beta = .99, epochs = 250, Y_onehot = None, load_params = False, return_params = True, save_params = False):
         self.X_train = X_train
         self.Y_train = Y_train
         self.nn_capacity = nn_capacity
         self.alpha = alpha
+        self.beta = beta
         self.epochs = epochs
         self.Y_onehot = Y_onehot
         self.load_params = load_params
@@ -129,14 +108,30 @@ class NN:
                 self.grad_preacts[layer - 1] = self.activations[layer - 1] - self.Y_onehot
                 self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T) * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
+               
+                self.v_grad_weights[layer - 1] = (self.beta * self.v_grad_weights[layer - 1]) + ((1- self.beta) * self.grad_weights[layer-1])
+                self.v_grad_bias[layer - 1] = (self.beta * self.v_grad_bias[layer - 1]) + ((1 - self.beta) * self.grad_bias[layer - 1])
+                
             elif layer not in [self.__layers_idxs[-1], self.__layers_idxs[0]]:   
-                self.grad_preacts[layer - 1] = np.dot(self.weights[layer].T, self.grad_preacts[layer]) * self._grad_Leaky_ReLU(self.preactivations[layer - 1])
+                self.grad_preacts[layer - 1] = np.dot(self.weights[layer].T, self.grad_preacts[layer]) * self._grad_Leaky_ReLU(self.preactivations[layer - 1]) 
                 self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T)  * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
+                
+                self.v_grad_weights[layer - 1] = (self.beta * self.v_grad_weights[layer - 1]) + ((1 - self.beta ) * self.grad_weights[layer-1])
+                self.v_grad_bias[layer - 1] = (self.beta * self.v_grad_bias[layer - 1]) + ((1 - self.beta ) * self.grad_bias[layer - 1])
+                
             else:
                 self.grad_preacts[layer - 1] = np.dot(self.weights[layer].T, self.grad_preacts[layer]) * self._grad_Leaky_ReLU(self.preactivations[layer - 1])
                 self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.X_train.T)  * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
+                
+                self.v_grad_weights[layer - 1] = (self.beta * self.v_grad_weights[layer - 1]) + ((1 - self.beta ) * self.grad_weights[layer-1])
+                self.v_grad_bias[layer - 1] = (self.beta * self.v_grad_bias[layer - 1]) + ((1 - self.beta ) * self.grad_bias[layer - 1])
+
+    def _update_params(self):
+        for layer in reversed(self.__layers_idxs):
+            self.weights[layer - 1] -= self.alpha * self.v_grad_weights[layer - 1]
+            self.bias[layer - 1] -= self.alpha * self.v_grad_bias[layer - 1]
 
     def _inference(self): 
 
@@ -153,10 +148,7 @@ class NN:
 
         return self.activations[-1]
 
-    def _update_params(self):
-        for layer in reversed(self.__layers_idxs):
-            self.weights[layer - 1] -= self.alpha * self.grad_weights[layer - 1]
-            self.bias[layer - 1] -= self.alpha * self.grad_bias[layer - 1]
+
            
     def _Leaky_ReLU(self, z):
         return np.maximum(.01 * z, z)  
@@ -202,7 +194,8 @@ class NN:
         self.grad_preacts = [0 * l for l in self.__layers_idxs]
         self.grad_weights = [0 * l for l in self.__layers_idxs]
         self.grad_bias = [0 * l for l in self.__layers_idxs]
-
+        self.v_grad_weights = [0 * l for l in self.__layers_idxs]
+        self.v_grad_bias = [0 * l for l in self.__layers_idxs]
 
     def _init_training_logs(self):
         print(colored(f"Training a Neural Network of size:\n", 'green', attrs = ['bold']))
@@ -215,7 +208,7 @@ class NN:
         for i in range(3):
             print(colored(i, 'green', attrs=['bold']))
             t.sleep(1)
-        print() # new line 
+        print() 
 
     def _save_params(self):
         if self.save_params:
@@ -282,18 +275,20 @@ if __name__ == "__main__":
     X_train, Y_train = x_y_split(train_data, y_col = 'first') 
     X_train = X_train.T / 255
 
-    save_params = 'models/test.pkl'
-    load_params = 'models/test.pkl'
-
-    epochs = 50
+    epochs = 100
     alpha = .1
+    beta = .9
+    
+    save_params = 'test.pkl'
+    load_params = 'test.pkl'
+    
     nn_capacity = {
        0: 784, 
        1: 32,
        2: 10
     }
     
-    nnet.train(X_train, Y_train, epochs = epochs, alpha = alpha, nn_capacity=nn_capacity, save_params = save_params)
+    nnet.train(X_train, Y_train, epochs = epochs, alpha = alpha, beta = beta, nn_capacity=nn_capacity, save_params = save_params, load_params = load_params)
     
     test_data = csv_to_numpy('data/fashion-mnist_train.csv')
     X_test, Y_test = x_y_split(test_data, y_col = 'first')
