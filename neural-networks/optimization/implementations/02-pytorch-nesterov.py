@@ -25,7 +25,7 @@ class NN(nn.Module):
         return acc
 
 if __name__ == "__main__":
-    
+   
     torch.manual_seed(1)
     
     device = (
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     model = NN().to(device) # send the model our device, in our case mps
   
     loss_fn = nn.CrossEntropyLoss()
-    optim = opt.SGD(model.parameters(), lr = alpha, momentum = beta)
+    optim = opt.SGD(model.parameters(), lr = alpha, momentum = beta, nesterov = True)
    
     model.train()
    

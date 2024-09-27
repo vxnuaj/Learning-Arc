@@ -5,27 +5,28 @@ from nue.preprocessing import csv_to_numpy, x_y_split
 
 
 class NN(nn.Module):
-    
     def __init__(self):
-        super().__init__()
-        self.flatten = nn.Flatten() # flatten inputs, if needed.
+        
+        super().__init__() 
+        self.flatten = nn.Flatten()
         self.architecture = nn.Sequential(
+            
             nn.Linear(784, 64),
-            nn.ReLU(),
-            nn.Linear(64, 10),
-        ) 
+            nn.LeakyReLU(),
+            nn.Linear(64, 10)
+            
+        )
 
     def forward(self, x):
         x = self.flatten(x)
         logits = self.architecture(x)
         return logits
-
-    def accuracy(self, pred, y):
-        acc = (pred == y).sum().item() / y.size(0)
-        return acc
-
-if __name__ == "__main__":
     
+    def accuracy(self, pred, y):
+        return (pred == y).sum().item() / y.size(dim = 0)
+    
+    
+if __name__ == "__main__":
     torch.manual_seed(1)
     
     device = (
@@ -45,38 +46,36 @@ if __name__ == "__main__":
 
     X_test = torch.tensor(X_test, dtype = torch.float32, device= device)
     Y_test = torch.tensor(Y_test, dtype = torch.float32, device= device).flatten()
-    
+   
+    alpha = .1
+    betas = (.9, .99)
+    lambd = .1
     epochs = 100
-    alpha = .05
-    beta = .9
-    
-    model = NN().to(device) # send the model our device, in our case mps
-  
-    loss_fn = nn.CrossEntropyLoss()
-    optim = opt.SGD(model.parameters(), lr = alpha, momentum = beta)
    
-    model.train()
-   
-    print(f"Using {device}!\n")
+    model = NN().to(device)
+    loss_fn = nn.CrossEntropyLoss() 
+    optim = opt.AdamW(model.parameters(), lr = alpha, betas = betas)
     
-    for epoch in range(epochs):  
-        logits = model(X_train)     
+    print(f"USING {device.upper()}.\n")   
+    for epoch in range(epochs):
+        
+        logits = model(X_train) 
         pred = logits.argmax(dim = 1)
-        loss = loss_fn(logits, Y_train)
-        acc = model.accuracy(pred, Y_train) 
-
-        print(f"Epoch: {epoch} | Accuracy: {acc} | Loss: {loss}")
-
+        acc = model.accuracy(pred, Y_train)
+        loss = loss_fn(logits, Y_train) 
+        
+        print(f"Epoch: {epoch + 1} | Accuracy: {acc} | Loss: {loss}")
+        
         loss.backward()
         optim.step()
         optim.zero_grad()
-
-    model.eval()
-    
-    with torch.no_grad():
-        logits = model(X_test) 
-        pred = logits.argmax(dim = 1)
-        loss = loss_fn(logits, Y_test)
-        acc = model.accuracy(pred, Y_test)
         
-    print(f"\nTest Accuracy: {acc} | Test Loss: {loss}") 
+    with torch.no_grad():
+        
+        logits = model.forward(X_test)
+        pred = logits.argmax(dim = 1)
+        acc = model.accuracy(pred, Y_test)
+        loss = loss_fn(logits, Y_test)
+        
+        print(f"Testing Acc: {acc} | Testing Loss: {loss}")
+    

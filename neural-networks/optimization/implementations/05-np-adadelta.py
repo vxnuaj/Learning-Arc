@@ -1,4 +1,6 @@
 
+# WARNING -- THIS DOES NOT WORK WELL. WILL DEBUG SOON.
+
 import numpy as np
 import jax as jx
 from jax import nn as jnn
@@ -12,7 +14,7 @@ from termcolor import colored
 
 class NN:
    
-    eps = 1e-10 
+    eps = 1e-7 
     
     def __init__(self, train_verbose = False, test_verbose = False, seed = None):
         self.train_verbose = train_verbose
@@ -20,13 +22,11 @@ class NN:
         self.__key = None
         self.seed = seed
     
-    def train(self, X_train, Y_train, nn_capacity:dict, alpha = .01, beta = .99, dampening = 0, epochs = 250, Y_onehot = None, load_params = False, return_params = True, save_params = False):
+    def train(self, X_train, Y_train, nn_capacity:dict, gamma = .9, epochs = 250, Y_onehot = None, load_params = False, return_params = True, save_params = False):
         self.X_train = X_train
         self.Y_train = Y_train
         self.nn_capacity = nn_capacity
-        self.alpha = alpha
-        self.beta = beta
-        self.dampening = dampening
+        self.gamma = gamma
         self.epochs = epochs
         self.Y_onehot = Y_onehot
         self.load_params = load_params
@@ -110,30 +110,51 @@ class NN:
                 self.grad_preacts[layer - 1] = self.activations[layer - 1] - self.Y_onehot
                 self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T) * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
-               
-                self.v_grad_weights[layer - 1] = ((self.beta * self.v_grad_weights[layer - 1]) + ((1- self.dampening) * self.grad_weights[layer-1]))
-                self.v_grad_bias[layer - 1] = (self.beta * self.v_grad_bias[layer - 1]) + ((1 - self.dampening) * self.grad_bias[layer - 1]) 
+             
+                #print("Leak Avg Weight Updates:", self.leak_avg_weight_updates[layer - 1])
+                #print("S Grad Weights:", self.s_grad_weights[layer - 1])
+ 
+                self.s_grad_weights[layer - 1] = (self.gamma * self.s_grad_weights[layer - 1]) + (1 - self.gamma) * np.square(self.grad_weights[layer - 1])
+                self.s_grad_bias[layer - 1] = (self.gamma * self.s_grad_bias[layer - 1]) + (1 - self.gamma) * np.square(self.grad_bias[layer - 1])
+                
+                self.rs_grad_weights[layer - 1] = - ( np.sqrt(self.leak_avg_weight_updates[layer - 1] + self.eps)/ np.sqrt(self.s_grad_weights[layer - 1] + self.eps)) * self.grad_weights[layer - 1]
+                self.rs_grad_bias[layer - 1] = -(np.sqrt(self.leak_avg_bias_updates[layer - 1] + self.eps) / np.sqrt(self.s_grad_bias[layer - 1] + self.eps)) * self.grad_bias[layer - 1]
+              
+                self.leak_avg_weight_updates[layer - 1] = (self.gamma * self.leak_avg_weight_updates[layer - 1]) + (1 - self.gamma) * np.square(self.rs_grad_weights[layer - 1])
+                self.leak_avg_bias_updates[layer - 1] = (self.gamma * self.leak_avg_bias_updates[layer - 1]) + ( 1 - self.gamma ) * np.square(self.rs_grad_bias[layer - 1])
                 
             elif layer not in [self.__layers_idxs[-1], self.__layers_idxs[0]]:   
                 self.grad_preacts[layer - 1] = np.dot(self.weights[layer].T, self.grad_preacts[layer]) * self._grad_Leaky_ReLU(self.preactivations[layer - 1]) 
                 self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T)  * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
-                
-                self.v_grad_weights[layer - 1] = ((self.beta * self.v_grad_weights[layer - 1]) + ((1 - self.dampening ) * self.grad_weights[layer-1])) 
-                self.v_grad_bias[layer - 1] = ((self.beta * self.v_grad_bias[layer - 1]) + ((1 - self.dampening ) * self.grad_bias[layer - 1])) 
-                
+
+                self.s_grad_weights[layer - 1] = (self.gamma * self.s_grad_weights[layer - 1]) + (1 - self.gamma) * np.square(self.grad_weights[layer - 1])
+                self.s_grad_bias[layer - 1] = (self.gamma * self.s_grad_bias[layer - 1]) + (1 - self.gamma) * np.square(self.grad_bias[layer - 1])
+
+                self.rs_grad_weights[layer - 1] = -( np.sqrt(self.leak_avg_weight_updates[layer - 1] + self.eps)/ np.sqrt(self.s_grad_weights[layer - 1] + self.eps)) * self.grad_weights[layer - 1]
+                self.rs_grad_bias[layer - 1] = -(np.sqrt(self.leak_avg_bias_updates[layer - 1] + self.eps) / np.sqrt(self.s_grad_bias[layer - 1] + self.eps)) * self.grad_bias[layer - 1]
+              
+                self.leak_avg_weight_updates[layer - 1] = (self.gamma * self.leak_avg_weight_updates[layer - 1]) + (1 - self.gamma) * np.square(self.rs_grad_weights[layer - 1])
+                self.leak_avg_bias_updates[layer - 1] = (self.gamma * self.leak_avg_bias_updates[layer - 1]) + ( 1 - self.gamma ) * np.square(self.rs_grad_bias[layer - 1])
+
             else:
                 self.grad_preacts[layer - 1] = np.dot(self.weights[layer].T, self.grad_preacts[layer]) * self._grad_Leaky_ReLU(self.preactivations[layer - 1])
                 self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.X_train.T)  * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
                 
-                self.v_grad_weights[layer - 1] = ((self.beta * self.v_grad_weights[layer - 1]) + ((1 - self.dampening ) * self.grad_weights[layer-1]))
-                self.v_grad_bias[layer - 1] = ((self.beta * self.v_grad_bias[layer - 1]) + ((1 - self.dampening ) * self.grad_bias[layer - 1])) 
+                self.s_grad_weights[layer - 1] = (self.gamma * self.s_grad_weights[layer - 1]) + (1 - self.gamma) * np.square(self.grad_weights[layer - 1])
+                self.s_grad_bias[layer - 1] = (self.gamma * self.s_grad_bias[layer - 1]) + (1 - self.gamma) * np.square(self.grad_bias[layer - 1])
+                
+                self.rs_grad_weights[layer - 1] = -(np.sqrt(self.leak_avg_weight_updates[layer - 1] + self.eps)/ np.sqrt(self.s_grad_weights[layer - 1] + self.eps)) * self.grad_weights[layer - 1]
+                self.rs_grad_bias[layer - 1] = -(np.sqrt(self.leak_avg_bias_updates[layer - 1] + self.eps) / np.sqrt(self.s_grad_bias[layer - 1] + self.eps)) * self.grad_bias[layer - 1]
+              
+                self.leak_avg_weight_updates[layer - 1] = (self.gamma * self.leak_avg_weight_updates[layer - 1]) + (1 - self.gamma) * np.square(self.rs_grad_weights[layer - 1])
+                self.leak_avg_bias_updates[layer - 1] = (self.gamma * self.leak_avg_bias_updates[layer - 1]) + ( 1 - self.gamma ) * np.square(self.rs_grad_bias[layer - 1])
 
     def _update_params(self):
         for layer in reversed(self.__layers_idxs):
-            self.weights[layer - 1] -= self.alpha * self.v_grad_weights[layer - 1]
-            self.bias[layer - 1] -= self.alpha * self.v_grad_bias[layer - 1]
+            self.weights[layer - 1] += self.leak_avg_weight_updates[layer - 1]
+            self.bias[layer - 1] += self.leak_avg_bias_updates[layer - 1]
 
     def _inference(self): 
 
@@ -150,7 +171,6 @@ class NN:
 
         return self.activations[-1]
 
-
            
     def _Leaky_ReLU(self, z):
         return np.maximum(.01 * z, z)  
@@ -159,8 +179,9 @@ class NN:
         return np.where(z > 0, 1, .01 )
     
     def _softmax(self, z):
-       return np.exp(z + self.eps) / np.sum(np.exp(z + self.eps), axis = 0, keepdims = True) 
-   
+        z = z - np.max(z, axis=0, keepdims=True)  # shifting values to prevent overflow
+        return np.exp(z) / np.sum(np.exp(z), axis=0, keepdims=True)
+ 
     def _cross_entropy(self):
         return - np.sum(self.Y_onehot * np.log(self.activations[-1] + self.eps)) * ( 1 / self.Y_train.size)
 
@@ -196,8 +217,13 @@ class NN:
         self.grad_preacts = [0 * l for l in self.__layers_idxs]
         self.grad_weights = [0 * l for l in self.__layers_idxs]
         self.grad_bias = [0 * l for l in self.__layers_idxs]
-        self.v_grad_weights = [0 * l for l in self.__layers_idxs]
-        self.v_grad_bias = [0 * l for l in self.__layers_idxs]
+        self.s_grad_weights = [0 * l for l in self.__layers_idxs]
+        self.s_grad_bias = [0 * l for l in self.__layers_idxs]
+        self.rs_grad_weights = [0 * l for l in self.__layers_idxs]
+        self.rs_grad_bias = [0 * l for l in self.__layers_idxs]
+         
+        self.leak_avg_weight_updates = [0 * l for l in self.__layers_idxs]
+        self.leak_avg_bias_updates = [0 * l for l in self.__layers_idxs]
 
     def _init_training_logs(self):
         print(colored(f"Training a Neural Network of size:\n", 'green', attrs = ['bold']))
@@ -277,13 +303,11 @@ if __name__ == "__main__":
     X_train, Y_train = x_y_split(train_data, y_col = 'first') 
     X_train = X_train.T / 255
 
-    epochs = 100
-    alpha = .1
-    beta = .9
-    dampening = 0
+    epochs = 1000
+    gamma = .99
     
-    save_params = 'test.pkl'
-    load_params = 'test.pkl'
+    save_params = 'models/adadeltaNN.pkl'
+    load_params = 'models/adadeltaNN.pkl'
     
     nn_capacity = {
        0: 784, 
@@ -291,7 +315,7 @@ if __name__ == "__main__":
        2: 10
     }
     
-    nnet.train(X_train, Y_train, epochs = epochs, alpha = alpha, beta = beta, dampening = dampening, nn_capacity=nn_capacity, save_params = save_params, load_params = load_params)
+    nnet.train(X_train, Y_train, epochs = epochs, gamma = gamma, nn_capacity=nn_capacity, save_params = save_params, load_params = load_params)
     
     test_data = csv_to_numpy('data/fashion-mnist_train.csv')
     X_test, Y_test = x_y_split(test_data, y_col = 'first')
