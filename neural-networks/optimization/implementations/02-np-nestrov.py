@@ -135,8 +135,8 @@ class NN:
                 self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T) * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
                
-                self.v_grad_weights[layer - 1] = (1- self.beta) * self.grad_weights[layer-1]
-                self.v_grad_bias[layer - 1] = (1 - self.beta) * self.grad_bias[layer - 1]
+                self.v_grad_weights[layer - 1] = (self.beta * self.v_grad_weights[layer - 1]) + ((1- self.beta) * self.grad_weights[layer-1])
+                self.v_grad_bias[layer - 1] = (self.beta * self.v_grad_bias[layer - 1]) + ((1 - self.beta) * self.grad_bias[layer - 1])
                 
             elif layer not in [self.__layers_idxs[-1], self.__layers_idxs[0]]:   
                 
@@ -150,9 +150,9 @@ class NN:
                 self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T)  * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
                 
-                self.v_grad_weights[layer - 1] = (1 - self.beta ) * self.grad_weights[layer-1]
-                self.v_grad_bias[layer - 1] =(1 - self.beta ) * self.grad_bias[layer - 1]
-                
+                self.v_grad_weights[layer - 1] = (self.beta * self.v_grad_weights[layer - 1]) + ((1- self.beta) * self.grad_weights[layer-1])
+                self.v_grad_bias[layer - 1] = (self.beta * self.v_grad_bias[layer - 1]) + ((1 - self.beta) * self.grad_bias[layer - 1])
+                 
             else:
                 
                 self.v_grad_weights[layer - 1] = self.beta * self.v_grad_weights[layer - 1]
@@ -165,8 +165,8 @@ class NN:
                 self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.X_train.T)  * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
                 
-                self.v_grad_weights[layer - 1] = (1 - self.beta) * self.grad_weights[layer-1]
-                self.v_grad_bias[layer - 1] = (1 - self.beta ) * self.grad_bias[layer - 1]
+                self.v_grad_weights[layer - 1] = (self.beta * self.v_grad_weights[layer - 1]) + ((1- self.beta) * self.grad_weights[layer-1])
+                self.v_grad_bias[layer - 1] = (self.beta * self.v_grad_bias[layer - 1]) + ((1 - self.beta) * self.grad_bias[layer - 1])
 
     def _update_params(self):
         for layer in reversed(self.__layers_idxs):

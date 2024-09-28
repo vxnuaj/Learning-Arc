@@ -35,7 +35,7 @@ Given a function $f(x, y) = x^2 - y^2$, it has a saddle point at $0, 0$.
 
 The input to this function is a vector in $\mathbb{R}^2$, therefore it's Hessian matrix (see [other notes](#other-notes)), will have $2$ eigenvalues.
 
-When the eigenvalues for the Hessian matrix of the function, are positive where the gradient is $0$, we have a local minima. This is as positive eigenvalues indicate an increasing 1st order partial derivative. But we have a flat, zero-gradient, so therefore we've reached at least a local minima, if not a global minima, a flat point in a convex region.
+When the eigenvalues for the Hessian matrix of the function, are positive where the gradient is $0$, we have at least a local minima. This is as positive eigenvalues indicate an increasing 1st order partial derivative. But we have a flat, zero-gradient, so therefore we've reached at least a local minima, if not a global minima, a flat point in a convex region.
 
 On the other hand, when the eigenvalues for the Hessian matrix of the function are negative, (meaning the Hessian is negative semi-definite), at a point where we have a $0$ gradient, we've reached at least a local maxima if not a global maxima, indicating a flat point in a concave region.
 
@@ -73,7 +73,7 @@ To solve for eigenvectors and eigenvalues:
 and to finally perform eigendecomposition, $A = V\Lambda V^-1$:
 
 1. Plug in each eigenvalue into the diagonal matrix, $\Lambda$ into the diagonal components.
-2. Plug in the corresponding eigenvector to each column vector in $\Lambda$, they must be same indices. Index of eigenvalue column in $\Lambda$ must be the same as index of eigenvector in $V$.
+2. Plug in the corresponding eigenvector to each column vector in $V$, they must be same indices. Index of eigenvalue column in $\Lambda$ must be the same as index of eigenvector in $V$.
 
 #### **Higher Order Partial Derivatives**
 

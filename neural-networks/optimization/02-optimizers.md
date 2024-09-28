@@ -14,13 +14,13 @@ Exponentially weighted average are essentially computed as:
 
 $V_t = \beta V_{t-1} + ( 1 - \beta ) \theta_t$
 
-where $\beta$ is the smoothign factor and $\theta$ is the value at the current time steps.
+where $\beta$ is the smoothing factor and $\theta$ is the value at the current time steps.
 
 Over multiple iterations, the formula replaces a given value of $\theta$ with $V$, a value that considers not only $\theta_t$ but previous values of $\theta$, $\theta_{t-n}$ where $n>0$, with exponentially decaying weights for earlier $\theta$ values as iterations go on.
 
 For a time step $t$, as we move away from $t$, each older value, $V_{t}$ will have a decreased weight, as new values are constnatly being overshadowed by values of $\theta$ at the current $t$.
 
-We apply the same principle to our gradients,as:
+We apply the same principle to our gradients, as:
 
 $v_t = \beta v_{t-1} + (1 - \beta) g_t$
 
@@ -62,7 +62,7 @@ As in prior momentum, we did:
 
 $v_t = \beta v_{t - 1} + (1 - \beta) \frac{∂L}{∂\theta}$
 
-$\theta = \theta -  \alpha v_t$
+$\hat{\theta} = \theta -  \alpha v_t$
 
 Nestorov introduces 'look ahead' via an intermediate update, utilizing only the historical velocity terms, prior to calculating the real gradient.
 
@@ -72,7 +72,7 @@ $\hat{\theta} = \theta - \alpha v_t$
 
 Compute -- $\frac{∂L}{∂\theta}$
 
-$v_t = (1 - \beta)\frac{∂L}{∂\theta}$
+$v_t = \beta v_{t-1} + (1 - \beta)\frac{∂L}{∂\theta}$
 
 $\theta = \theta - \alpha v_t$
 
@@ -134,9 +134,13 @@ $\theta = \theta - \frac{\alpha}{\sqrt{\epsilon + g_t^2}} \odot g_t$
 
 where $\epsilon$ is a small number to avoid division by $0$.
 
-Then accumulating the gradients becomes the simple formulation:
+Then, we want to accumulate the gradients as:
 
 $s_t = s_{t-1} + g_t^2$
+
+So the formula ends up being:
+
+$\theta = \theta - \frac{\alpha}{\sqrt{\epsilon + s_t}} \odot g_t$
 
 The more frequent your feature is, the larger your gradient accumulation will be, as you'll have taken a larger $\frac{∂L}{∂\theta}$ for the specific $\theta$ that activates for the specific feature.
 
@@ -289,7 +293,7 @@ s_t = \beta s_t + (1 - \beta) g_t^2\\[4mm]
 \theta = \theta - \frac{\alpha}{\sqrt{s_t + \epsilon}}v_t
 ```
 
-If we add $L2$ regualrization, we'd do as:
+If we add $L2$ regularization, we'd do as:
 
 ```math
 g_t = \frac{∂\mathcal{L(\theta, y)}}{∂\theta} + \lambda w_t\\[4mm]
