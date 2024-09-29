@@ -85,6 +85,8 @@ In concern to the above issue, when we have a batch size of $1$ and do have kern
 
 **LayerNorm**
 
+> [Paper](https://arxiv.org/abs/1607.06450v1)
+
 It works exactly like BatchNorm, except it's applied to a single observation at once.
 
 This time, rather than computing
