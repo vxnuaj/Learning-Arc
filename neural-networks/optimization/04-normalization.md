@@ -116,7 +116,9 @@ In ConvNets, LayerNorm would be computed as the same, summing over $j$ features 
 
 For inference, just like BatchNorm, we can run a leaky average of $\sigma$ and $\beta$ to use as parameters during forward passes.
 
-## Group Normalization
+### Group Normalization
+
+> [Group Normalization](https://arxiv.org/abs/1803.08494)
 
 Group Normalization is akin to Layer Normalization, with the difference that instead of taking the $\mu$ and $\sigma$ of the entire set of features for the $ith$ sample, we instead take the $\sigma$ and $\mu$ for a subset of the sample.
 
