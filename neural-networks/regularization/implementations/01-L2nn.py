@@ -49,7 +49,7 @@ class NN:
         self._get_params()  
         self._inference() 
         
-        print(f"Test Accuracy: {self._test_accuracy()}")
+        print(f"Test Accuracy: {self._test_accuracy()}%")
         print(f"Test Cross Entropy: {self._test_cross_entropy()}")
         
         return np.argmax(self.activations[-1], axis = 0) 
@@ -110,11 +110,11 @@ class NN:
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
             elif layer not in [self.__layers_idxs[-1], self.__layers_idxs[0]]:   
                 self.grad_preacts[layer - 1] = np.dot(self.weights[layer].T, self.grad_preacts[layer]) * self._grad_Leaky_ReLU(self.preactivations[layer - 1])
-                self.grad_weights[layer - 1] = (np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T) + (self.lambd * np.linalg.norm(self.weights[layer - 1])))  * ( 1 / self.Y_train.size )
+                self.grad_weights[layer - 1] = (np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T) + (self.lambd * self.weights[layer - 1]))  * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
             else:
                 self.grad_preacts[layer - 1] = np.dot(self.weights[layer].T, self.grad_preacts[layer]) * self._grad_Leaky_ReLU(self.preactivations[layer - 1])
-                self.grad_weights[layer - 1] = (np.dot(self.grad_preacts[layer - 1], self.X_train.T) + (self.lambd * np.linalg.norm(self.weights[layer - 1])))  * ( 1 / self.Y_train.size )
+                self.grad_weights[layer - 1] = (np.dot(self.grad_preacts[layer - 1], self.X_train.T) + (self.lambd * self.weights[layer - 1]))  * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
 
     def _inference(self): 
@@ -275,7 +275,7 @@ if __name__ == "__main__":
     load_params = 'models/test.pkl'
 
     epochs = 50
-    lambd = 1
+    lambd = .1
     alpha = .1
     nn_capacity = {
        0: 784, 

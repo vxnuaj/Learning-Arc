@@ -33,3 +33,5 @@ Thereby, as weights are larger, we perform larger weight updates to keep them sm
 Mechanistically works the same as L2, but instead takes the absolute value of the magnitude of weights, rather than squaring it.
 
 $\hat{\phi} = argmin_{\phi}[\sum_{i = 1}^I l_i[x_i, y_i] + \lambda|\sum_j \phi_j|]$
+
+> *is the gradient of l1 regularization the signed weights or the signed magnitude?*
