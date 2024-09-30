@@ -22,17 +22,28 @@ Questions? Message me on [X (formerly twitter) @ vxnuaj](https://x.com/vxnuaj)!
     - [**CNNs**](#cnns)
     - [RNNs](#rnns)
     - [Attention \& Transformers](#attention--transformers)
-
+  
 
 ## Index
 
-1. [Intro / Recap to Neural Networks](intro-to-nnet)
-   1. [NOTES | NYU Lecture: History, motivation, and evolution of Deep Learning](intro-to-nnet/01-nyu-1.md)
-   2. [NOTES | Chapter 3 of Understanding Deep Learning](intro-to-nnet/02-Chap3UDL.md)
-   3. [NOTES | Chapter 4 of Understanding Deep Learning](intro-to-nnet/03-Chap4UDL.md)
-   4. [NOTES | Chapter 5 of Understanding Deep Learning](intro-to-nnet/04-Chap5UDL.md)
-   5. [IMPLEMENTATION | Neural Net from Scratch in Jax](intro-to-nnet/06-nn-jax.py)
-   6. [IMPLEMENTATION | Neural Net from Scratch in NumPy](intro-to-nnet/06-nn-np.py)
+1. [Recap to Neural Networks](intro-to-nnet)
+   1. Foundations 
+      1. [NOTES | NYU Lecture: History, motivation, and evolution of Deep Learning](neural-networks/foundations/01-nyu-1.md)
+      2. [NOTES | Chapter 3 of Understanding Deep Learning](neural-networks/foundations/02-Chap3UDL.md)
+      3. [NOTES | Chapter 4 of Understanding Deep Learning](neural-networks/foundations/02-Chap4UDL.md)
+      4. [NOTES | Chapter 5 of Understanding Deep Learning](neural-networks/foundations/02-Chap5UDL.md)
+      5. [IMPLEMENTATION | Neural Net from Scratch in Jax](neural-networks/foundations/06-nn-jax.py)
+      6. [IMPLEMENTATION | Neural Net from Scratch in NumPy](neural-networks/foundations/06-nn-np.py)
+  1. Optimization
+      1. [NOTES | Intro to Optimization](neural-networks/optimization/01-optim-dl.md)
+      2. [NOTES | Optimizers](neural-networks/optimization/02-optimizers.md)
+      3. [NOTES | Learning Rate Scheduling](neural-networks/optimization/03-lr-sche.md)
+      4. [NOTES | Normalization](neural-networks/optimization/04-normalization.md)
+      5. [IMPLEMENTATIONS | All Optimizers and Normalization](neural-networks/optimization/implementations/)
+  2. Regularization
+     1. [NOTES | Regularization](neural-networks/regularization/01-regularization.md) 
+     2. [IMPLEMENTATIONS | L1, L2, Dropout](neural-networks/regularization/implementations/)
+
 
 ## Path
 
