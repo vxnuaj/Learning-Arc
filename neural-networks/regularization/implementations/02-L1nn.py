@@ -103,19 +103,22 @@ class NN:
                 self.activations[layer - 1] = self._softmax(self.preactivations[layer - 1]) 
 
     def _backward(self):
+        
         for layer in reversed(self.__layers_idxs):
+            print(np.max(self.grad_weights[layer - 1]))
             if layer == self.__layers_idxs[-1]:
                 self.grad_preacts[layer - 1] = self.activations[layer - 1] - self.Y_onehot
                 self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T) * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
             elif layer not in [self.__layers_idxs[-1], self.__layers_idxs[0]]:   
                 self.grad_preacts[layer - 1] = np.dot(self.weights[layer].T, self.grad_preacts[layer]) * self._grad_Leaky_ReLU(self.preactivations[layer - 1])
-                self.grad_weights[layer - 1] = (np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T) + (self.lambd * self.weights[layer - 1]))  * ( 1 / self.Y_train.size )
+                self.grad_weights[layer - 1] = (np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T) + (self.lambd * np.sign(self.weights[layer - 1])))  * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
             else:
                 self.grad_preacts[layer - 1] = np.dot(self.weights[layer].T, self.grad_preacts[layer]) * self._grad_Leaky_ReLU(self.preactivations[layer - 1])
-                self.grad_weights[layer - 1] = (np.dot(self.grad_preacts[layer - 1], self.X_train.T) + (self.lambd * self.weights[layer - 1]))  * ( 1 / self.Y_train.size )
+                self.grad_weights[layer - 1] = (np.dot(self.grad_preacts[layer - 1], self.X_train.T) + (np.sign(self.lambd * self.weights[layer - 1])))  * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
+
 
     def _inference(self): 
 
@@ -148,15 +151,8 @@ class NN:
    
     def _cross_entropy(self):
        
-        penalty = []
+        penalty = np.sum([np.linalg.norm(w, ord = 1) for w in self.weights])
         
-        for layer in reversed(self.__layers_idxs):
-            if layer != self.__layers_idxs[-1]:
-                penalty_i = (1/2) * np.square(np.linalg.norm(self.weights[layer])) 
-                penalty.append(penalty_i)
-      
-        penalty = np.sum(penalty)
-       
         return - (np.sum(self.Y_onehot * np.log(self.activations[-1] + self.eps)) + penalty) * ( 1 / self.Y_train.size)
 
     def _test_cross_entropy(self):
@@ -275,7 +271,7 @@ if __name__ == "__main__":
     load_params = 'models/test.pkl'
 
     epochs = 50
-    lambd = .1
+    lambd = 1
     alpha = .1
     nn_capacity = {
        0: 784, 

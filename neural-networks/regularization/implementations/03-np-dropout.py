@@ -1,3 +1,4 @@
+# INVERTED DROPOUT, only for HIDDEN LAYERS
 
 import numpy as np
 import jax as jx
@@ -20,12 +21,14 @@ class NN:
         self.__key = None
         self.seed = seed
     
-    def train(self, X_train, Y_train, nn_capacity:dict, alpha = .01, lambd = .1, epochs = 250, Y_onehot = None, load_params = False, return_params = True, save_params = False): # save params to save parameters to directory, as pkl file.
+    def train(self, X_train, Y_train, nn_capacity:dict, alpha = .01, beta_1 = .99, beta_2 = .99, dropout_p = .5, epochs = 250, Y_onehot = None, load_params = False, return_params = True, save_params = False):
         self.X_train = X_train
         self.Y_train = Y_train
         self.nn_capacity = nn_capacity
         self.alpha = alpha
-        self.lambd = lambd
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
+        self.dropout_p = dropout_p
         self.epochs = epochs
         self.Y_onehot = Y_onehot
         self.load_params = load_params
@@ -49,7 +52,7 @@ class NN:
         self._get_params()  
         self._inference() 
         
-        print(f"Test Accuracy: {self._test_accuracy()}%")
+        print(f"Test Accuracy: {self._test_accuracy()}")
         print(f"Test Cross Entropy: {self._test_cross_entropy()}")
         
         return np.argmax(self.activations[-1], axis = 0) 
@@ -79,7 +82,8 @@ class NN:
         self._init_training_logs() 
         
         start_time = t.time()
-        for epoch in range(self.epochs): 
+        for epoch in range(self.epochs):
+            self.c_epoch = epoch + 1
             self._forward()
             if self.train_verbose:
                 print(f"EPOCH -- {epoch + 1} | ACCURACY -- {self._accuracy()}% | CROSS ENTROPY LOSS -- {self._cross_entropy()}") 
@@ -99,6 +103,8 @@ class NN:
                 
             if layer != len(self.__layers_idxs):
                 self.activations[layer - 1] = self._Leaky_ReLU(self.preactivations[layer - 1])
+                self.activations[layer - 1] = (np.random.binomial(1, self.dropout_p, size = (self.activations[layer - 1].shape[0], 1)) * self.activations[layer - 1]) / (1 / self.dropout_p)
+
             else:
                 self.activations[layer - 1] = self._softmax(self.preactivations[layer - 1]) 
 
@@ -108,14 +114,39 @@ class NN:
                 self.grad_preacts[layer - 1] = self.activations[layer - 1] - self.Y_onehot
                 self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T) * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
+               
+                self.v_grad_weights[layer - 1] = ((self.beta_1 * self.v_grad_weights[layer - 1]) + ((1- self.beta_1) * self.grad_weights[layer-1]))
+                self.v_grad_bias[layer - 1] = (self.beta_1 * self.v_grad_bias[layer - 1]) + ((1 - self.beta_1) * self.grad_bias[layer - 1]) 
+               
+                self.s_grad_weights[layer - 1] = ((self.beta_2 * self.s_grad_weights[layer - 1]) + ((1 - self.beta_2) * np.square(self.grad_weights[layer - 1])))
+                self.s_grad_bias[layer - 1]  = ((self.beta_2 * self.s_grad_bias[layer - 1]) + (( 1 - self.beta_2) * np.square(self.grad_bias[layer - 1])))
+                
             elif layer not in [self.__layers_idxs[-1], self.__layers_idxs[0]]:   
-                self.grad_preacts[layer - 1] = np.dot(self.weights[layer].T, self.grad_preacts[layer]) * self._grad_Leaky_ReLU(self.preactivations[layer - 1])
-                self.grad_weights[layer - 1] = (np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T) + (self.lambd * self.weights[layer - 1]))  * ( 1 / self.Y_train.size )
+                self.grad_preacts[layer - 1] = np.dot(self.weights[layer].T, self.grad_preacts[layer]) * self._grad_Leaky_ReLU(self.preactivations[layer - 1]) 
+                self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.activations[layer - 2].T)  * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
+                
+                self.v_grad_weights[layer - 1] = ((self.beta_1 * self.v_grad_weights[layer - 1]) + ((1 - self.beta_1 ) * self.grad_weights[layer-1])) 
+                self.v_grad_bias[layer - 1] = ((self.beta_1 * self.v_grad_bias[layer - 1]) + ((1 - self.beta_1 ) * self.grad_bias[layer - 1])) 
+                
+                self.s_grad_weights[layer - 1] = ((self.beta_2 * self.s_grad_weights[layer - 1]) + ((1 - self.beta_2) * np.square(self.grad_weights[layer - 1])))
+                self.s_grad_bias[layer - 1]  = ((self.beta_2 * self.s_grad_bias[layer - 1]) + (( 1 - self.beta_2) * np.square(self.grad_bias[layer - 1])))
+                
             else:
                 self.grad_preacts[layer - 1] = np.dot(self.weights[layer].T, self.grad_preacts[layer]) * self._grad_Leaky_ReLU(self.preactivations[layer - 1])
-                self.grad_weights[layer - 1] = (np.dot(self.grad_preacts[layer - 1], self.X_train.T) + (self.lambd * self.weights[layer - 1]))  * ( 1 / self.Y_train.size )
+                self.grad_weights[layer - 1] = np.dot(self.grad_preacts[layer - 1], self.X_train.T)  * ( 1 / self.Y_train.size )
                 self.grad_bias[layer - 1] = np.sum(self.grad_preacts[layer - 1], axis = 1, keepdims = True) * ( 1 / self.Y_train.size )
+                
+                self.v_grad_weights[layer - 1] = ((self.beta_1 * self.v_grad_weights[layer - 1]) + ((1 - self.beta_1 ) * self.grad_weights[layer-1]))
+                self.v_grad_bias[layer - 1] = ((self.beta_1 * self.v_grad_bias[layer - 1]) + ((1 - self.beta_1) * self.grad_bias[layer - 1])) 
+                
+                self.s_grad_weights[layer - 1] = ((self.beta_2 * self.s_grad_weights[layer - 1]) + ((1 - self.beta_2) * np.square(self.grad_weights[layer - 1])))
+                self.s_grad_bias[layer - 1]  = ((self.beta_2 * self.s_grad_bias[layer - 1]) + (( 1 - self.beta_2) * np.square(self.grad_bias[layer - 1])))
+                
+    def _update_params(self):
+        for layer in reversed(self.__layers_idxs):
+            self.weights[layer - 1] -= (self.alpha / np.sqrt(self.s_grad_weights[layer - 1] + self.eps)) * self.v_grad_weights[layer - 1]
+            self.bias[layer - 1] -= (self.alpha / np.sqrt(self.s_grad_bias[layer - 1] + self.eps)) * self.v_grad_bias[layer - 1]
 
     def _inference(self): 
 
@@ -132,11 +163,7 @@ class NN:
 
         return self.activations[-1]
 
-    def _update_params(self):
-        for layer in reversed(self.__layers_idxs):
-            self.weights[layer - 1] -= self.alpha * self.grad_weights[layer - 1]
-            self.bias[layer - 1] -= self.alpha * self.grad_bias[layer - 1]
-           
+
     def _Leaky_ReLU(self, z):
         return np.maximum(.01 * z, z)  
    
@@ -144,20 +171,15 @@ class NN:
         return np.where(z > 0, 1, .01 )
     
     def _softmax(self, z):
-       return np.exp(z + self.eps) / np.sum(np.exp(z + self.eps), axis = 0, keepdims = True) 
+        z = z - np.max(z, axis = 0, keepdims = True)
+        return np.exp(z + self.eps) / np.sum(np.exp(z + self.eps), axis = 0, keepdims = True) 
+  
+    def _dropout_mask(self, act_size ):
+        mask = np.random.binomial(1, self.dropout_p, size = (act_size ,1))
+        return mask
    
     def _cross_entropy(self):
-       
-        penalty = []
-        
-        for layer in reversed(self.__layers_idxs):
-            if layer != self.__layers_idxs[-1]:
-                penalty_i = (1/2) * np.square(np.linalg.norm(self.weights[layer])) 
-                penalty.append(penalty_i)
-      
-        penalty = np.sum(penalty)
-       
-        return - (np.sum(self.Y_onehot * np.log(self.activations[-1] + self.eps)) + penalty) * ( 1 / self.Y_train.size)
+        return - np.sum(self.Y_onehot * np.log(self.activations[-1] + self.eps)) * ( 1 / self.Y_train.size)
 
     def _test_cross_entropy(self):
         return - np.sum(self.Y_onehot * np.log(self.activations[-1] + self.eps)) * ( 1 / self.Y_test.size)
@@ -191,8 +213,11 @@ class NN:
         self.grad_preacts = [0 * l for l in self.__layers_idxs]
         self.grad_weights = [0 * l for l in self.__layers_idxs]
         self.grad_bias = [0 * l for l in self.__layers_idxs]
-
-
+        self.v_grad_weights = [0 * l for l in self.__layers_idxs]
+        self.v_grad_bias = [0 * l for l in self.__layers_idxs]
+        self.s_grad_weights = [0 * l for l in self.__layers_idxs]
+        self.s_grad_bias = [0 * l for l in self.__layers_idxs]
+        
     def _init_training_logs(self):
         print(colored(f"Training a Neural Network of size:\n", 'green', attrs = ['bold']))
         for i in self.__layers_idxs:
@@ -200,11 +225,11 @@ class NN:
                 print(colored(f"Output Layer ({i}): {list(self.nn_capacity.values())[i]} Output Units", 'green', attrs = ['bold']))
             else:
                 print(colored(f"Layer {i}: {list(self.nn_capacity.values())[i]} Hidden Units", 'green', attrs = ['bold'])) 
-        print(colored(f'\nBeginning Training, for {self.epochs} epochs, in 3 seconds.\n', 'green', attrs = ['bold']))
+        print(colored(f'\nBeginning Training with dropout probability set to {self.dropout_p}, for {self.epochs} epochs, in 3 seconds.\n', 'green', attrs = ['bold']))
         for i in range(3):
             print(colored(i, 'green', attrs=['bold']))
             t.sleep(1)
-        print() # new line 
+        print() 
 
     def _save_params(self):
         if self.save_params:
@@ -265,25 +290,29 @@ class NN:
 
 if __name__ == "__main__":
     
+    
     nnet = NN(train_verbose = True, seed = 1)
     
     train_data = csv_to_numpy('data/fashion-mnist_train.csv')
     X_train, Y_train = x_y_split(train_data, y_col = 'first') 
     X_train = X_train.T / 255
 
-    save_params = 'models/test.pkl'
-    load_params = 'models/test.pkl'
-
-    epochs = 50
-    lambd = .1
-    alpha = .1
+    epochs = 1000
+    alpha = .01
+    beta_1 = .99
+    beta_2 = .99
+    dropout_p = .8 # probability of keeping a neuron. 1 - dropout_p is the probability of dropping a neuron. Typicall 1 - dropout = .2 to .5 represent good starting points.
+    
+    save_params = 'models/dropoutNN.pkl'
+    load_params = 'models/dropoutNN.pkl'
+    
     nn_capacity = {
        0: 784, 
        1: 32,
        2: 10
     }
     
-    nnet.train(X_train, Y_train, epochs = epochs, alpha = alpha, lambd = lambd, nn_capacity=nn_capacity, save_params = save_params)
+    nnet.train(X_train, Y_train, epochs = epochs, alpha = alpha, beta_1 = beta_1, beta_2 = beta_2, dropout_p = dropout_p, nn_capacity=nn_capacity, save_params = save_params, load_params = load_params)
     
     test_data = csv_to_numpy('data/fashion-mnist_train.csv')
     X_test, Y_test = x_y_split(test_data, y_col = 'first')
