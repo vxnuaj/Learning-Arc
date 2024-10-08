@@ -57,6 +57,8 @@ Z_W = \frac{X_W + 2P - V_W}{S} + 1\\[3mm]
 
 where $\text{Matrix}_H$ denotes the height of the given matrix and $\text{Matrix}_W$ is the width of the given matrix.
 
+$V$ is the kernel.
+
 $S$ is the stride, $P$ is the padding, and the $+1$ denotes the initial position of the Kernel.
 
 Say I have a $4 \times 4$ $X$ and a $2 \times 2$ $V$ with no stride or padding.
@@ -88,7 +90,7 @@ def conv2d(X, K): # no padding / stride
     Y = torch.zeros(size = (X_h - K_h + 1, X_w - K_w + 1))
     for i in range(Y.shape[0]):
         for j in range(Y.shape[1]):
-            Y[i, j] = (X[i:i+K_h, j:j+K_w] * K).sum() 
+            Y[i, j] = (X[i:i+K_h, j:j+K_w] * K).sum() self.X[i * stride:i * stride + kernel_size].
     return Y
 ```
 
@@ -117,7 +119,7 @@ Other pixels in $X$ are convolved over multiple times.
 
 > Won't lead to the kernel K properly learning the edges of the image. If the edges of the image might be important, you want to apply padding!
 
-Another implication is convolving a larger $K$ over $X$ will ultimately lead to a larger reduction in pixel size of the feature map, as you get deeper into your network.
+Another implication is convolving a larger $K$ over $X$ will ultimately lead to a larger reduction in dimensionality of the feature map, as you get deeper into your network.
 
 **Padding**, if needed can resolve the issue by adding 'pads' or zeros around the edges of $X$. 
 
@@ -271,6 +273,40 @@ If we factor in multiple input ($c_i$) and output ($c_o$) channels, this turns i
 
 as we have to compute a convolution over $c_i$ filter maps with $c_o$ sets of kernels.
 
+### Receptive Field
+
+The receptive field of a given CNN is essentially the total amount of features the model sees to comptue a single feature at a given layer, not only from the direct previous layer, but from the initial layer. *How many features from the input has the convolution operations used to generate the given $ith$ feature in the $lth$ layer*.
+
+For a given output feature, you can compute the receptive field with respect to any layer given the formula:
+
+```math
+
+r_i = r_{i-1} + (k - 1) \prod_{k=1}^{i - 1}s_k
+
+```
+
+where $r_i$ is the receptive field of teh $ith$ layer, $k$ is the kernel size, and $s_k$ is the stride of the $kth$ kernel.
+
+To comute without iterating through each $r_i$, you can go as:
+
+```math
+
+r_l = 1 + \sum_{i=1}^l((k_i-1)\prod_{k=1}^{i-1}s_k)
+
+```
+
+Keep in mind that the receptive field corresponds to a specific kernel in a given layer, $k_i^l$ (forget previous notation).
+
+For a given $k_i \in K_i^{lc}$ ($k_i$ is the specific kernel, $K_i^{lc}$ is the set of $k_i$ for the given output channel, $c$ at the $l$th layer.), larger receptive fields, given by a larger $k_i$ are able to summarize more information form a given feature map. If in the input layer, a larger receptive field will allow to us to handle a more global context from the input image, allowing us to denote the position of spatial features.
+
+Say you have $10$ output channels, each with dims $2 \times 2$. The receptive field for each kernel is $25$. Then each kernel, $k_i$, is extracting a specific feature from that $25 \times 25$ area in the input layer, to then serve as a feature for the subsequent fully connected layers for softargmax classification (typically). 
+
+Essentially, each input feature into the fc layers are extracted features from the original $25 \times 25$ receptive field. The more kernels you have, for a given $lth$ layer, the more features you can extract from the receptive field, $r_l$
+
+>[!IMPORTANT]
+>**A larger kernel: More global representations of the given feature map**\
+>**More output channels (sets of kernels per channel): More features extracted from the given receptive field.**
+
 ### Pooling
 
 As we get deeper into a ConvNet, after much dimensionality reducction (via typical convolutions or pooling), the smaller a given feature map becomes and the larger proportion the kernel covers relative to the given input feature map.
@@ -299,6 +335,9 @@ Pooling allows us to introduce a tad bit of shift invariance to a model. The deg
 
 Though, it isn't immune to shift invariance, the probaiblity of it is higher. Of course, there could always be the chance that the maximum value within the receptive field of the pooling kernel on $X$ lies on the edge of the kernel. In that case, any shift to $X$ would not yield the pooling layer to be shift invariant.
 
+Though, adding pooling layers **forces** a set of kernels to capture the features that are **shift invariant**. During backpropagation, if the Kernel hasn't captured the correct set of features that lead to the correct output, due to a lack of shift invariance in the set of captured features by the respective Kernel, the kernel will learn weights that allow for shift invariance to remain present as we go through the pooling layers. This is as we **need** a set of shift invariant features, to properly classify samples.
+
+
 **Strides and Padding for Pooling**
 
 - Higher stride to the pooling operation means a higher degree of reduced dimensionality
@@ -307,6 +346,26 @@ Though, it isn't immune to shift invariance, the probaiblity of it is higher. Of
 **Pooling Multiple Channels**
 
 - We pool multiple channels separately, no need to concatenate each channel as is done in convolutions.
+
+### Convolutions and Pooling hold Very Strong Priors
+
+Convolutions assume:
+
+- Shift equivariance
+- Locality via the Receptive field.
+- Shared weights across hidden units can detect the same features
+
+Pooling assumes:
+
+- Shift invariance -- up to small shifts in the input feature map
+
+Both form a hypothesis of the data you want to learn. The architecture matters more than a fully connected network, given that you have a smaller set of weights per feature and introduce pooling layers.
+
+Per deeplearningbook.com:
+
+*If a task relies on preserving precise spatial information, then using pooling on all features can increase the training error.*
+
+You risk underfitting if your architecture isn't designed with the strong priors that reflect the data.
 
 
 ## Other
