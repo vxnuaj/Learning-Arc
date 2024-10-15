@@ -26,3 +26,66 @@ Your kernel, then has a larger receptive field for the given $l$th layer, while 
 Although for an individual convolution operation, at position $i, j$, you will skip over features in the feature map, in subsequent operations, say $i +1, j+1$, you will be convolving over the initially skipped features, thereby you don't lose as much information as you'd if you'd MaxPooled. 
 
 While to increase size of receptive field relative to number of features in an output feature map, dilation can help towards doing so as the larger dilated kernel summarizes more info, given a larger receptive field, while losing less information (as strides can leave out pixels and max pooling leaves out features for the maximum), with lower computational cost than strided convolutions.
+
+## Transposed Convolution
+
+A transposed convolution (also known as a deconvolution or a fractionally strided convolution), is a convop that is commonly thought as the reverse of the standard convolution operation, as a 'deconvolution', but isn't truly the case.
+
+While the transposed convolution can upsample a given $\hat{X}$ back into the original shape of $X$, where $X$ is the matrix prior to being convolved with kernel $\mathcal{K}$, it will not retain the same information as the original $X$, hence it isn't appropriate to call it a deconvolution.
+
+> even if u use the same kernel, will be different **X**
+
+
+
+Say you have $\hat{X}$ as the $X$ post-convolution with $\mathcal{K}$.
+
+```math
+
+\text{Shape } \hat{X}: (3 \times 3)\\[3mm]
+
+\hat{X} = \begin{bmatrix}
+x_{11} & x_{12} & x_{13} \\
+x_{21} & x_{22} & x_{23} \\
+x_{31} & x_{32} & x_{33}
+\end{bmatrix}
+\\[3mm]
+\text{Shape } \mathcal{K}: (2 \times 2) \\[3mm]
+\mathcal{K} = \begin{bmatrix}
+k_{11} & k_{12} \\
+k_{21} & k_{22}
+\end{bmatrix}
+```
+
+The output size for the transposed convolution can be denoted as:
+
+```math
+O=S×(I−1)+K−2P
+\\[2mm]
+4 = 1 \times 2 + 2
+\\[2mm]
+Y \text{ shape: } (4 \times 4)
+
+```
+
+Lets initialize $Y$ to be all $0$s.
+
+To perform the transposed convolution, you get a given $\hat{x}_{mn}$, where $m$ is the row index and $n$ is the column index, and element-wise multiply it with $\mathcal{K}$.
+
+For the first op, you'd get:
+
+```math
+
+y_{m:\mathcal{K_m},\hspace{.2mm}n:\mathcal{K_n}} = \hat{x}_{11}\mathcal{K} = \hat{x}_{11} * \begin{bmatrix}k_{11}, k_{12} \\ k_{21}, k_{22}\end{bmatrix}
+
+```
+
+and the same is done for every $x_{mn}$.
+
+Each $\hat{x}_{mn}$ in $\hat{X}$, corresponds to a portion of the output, $Y$, as $Y_{m:\mathcal{K_m},\hspace{.2mm}n:\mathcal{K_n}}$, where the portion of $Y$ is simply the same size as $\mathcal{K}$.
+
+You can think of the output, $Y$, being a result of sliding the kernel over the given output matrix, $Y$, and adding all possible $Y_{m:\mathcal{K_m},\hspace{.2mm}n:\mathcal{K_n}}$ to the respective indices, $m:\mathcal{K_m},\hspace{.2mm}n:\mathcal{K_n}$ (think numpy slicing).
+
+Overlapping slices will get some values of the transposed convolution operation added to values of the transposed convolution at previous indices, $m-1$ and $n-1$.
+
+
+
