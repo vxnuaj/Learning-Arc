@@ -1,11 +1,9 @@
 import numpy as np
 from convnet import ConvNet
 
-# Set random seed for reproducibility
 seed = 1
 np.random.seed(seed)
 
-# Function to generate simple shapes: 0 for square, 1 for circle
 def generate_shape(label, size=3):
     img = np.zeros((size, size))
     if label == 0:  # Square
@@ -16,31 +14,24 @@ def generate_shape(label, size=3):
         img[mask] = 1
     return img
 
-# TRAINING SET (Simple binary classification with square and circle patterns)
-X_train = np.array([generate_shape(0), generate_shape(1), generate_shape(0), generate_shape(1)])  # 4 samples with 3x3 images
-X_train = X_train[:, np.newaxis, :, :]  # Add channel dimension (C=1) at the correct position
-y_train = np.array([0, 1, 0, 1])  # Labels: 0 (square) and 1 (circle)
+X_train = np.array([generate_shape(0), generate_shape(1), generate_shape(0), generate_shape(1)])  
+X_train = X_train[:, np.newaxis, :, :] 
+y_train = np.array([0, 1, 0, 1])  
 
-# TEST SET (Simple binary test data)
-X_test = np.array([generate_shape(0), generate_shape(1)])  # Two test samples
-X_test = X_test[:, np.newaxis, :, :]  # Add channel dimension (C=1) at the correct position
-y_test = np.array([0, 1])  # Labels: 0 (square) and 1 (circle)
+X_test = np.array([generate_shape(0), generate_shape(1)])  
+X_test = X_test[:, np.newaxis, :, :]  
+y_test = np.array([0, 1])  
 
-# Verify the shapes
-print("Training data shape:", X_train.shape)  # Expected: (4, 1, 3, 3)
-print("Test data shape:", X_test.shape)  # Expected: (2, 1, 3, 3)
 
-# Hyperparameters
-layers = ['C', 'C', 'FC', 'FC']  # Two convolutional layers followed by fully connected layers
-n_output_channels = [1, 1]       # One output channel for each conv layer
-layer_size = [3, 3, 3, 2]        # 3x3 kernel size, 3 units for FC layers, 2 units in the last FC layer (binary output)
-activations = ['leakyrelu', 'leakyrelu', 'leakyrelu', 'softmax']  # LeakyReLU activations followed by softmax
-padding = [1, 1]                 # Padding to maintain the size after convolution
-stride = [1, 1]                  # Stride of 1 for both convolution layers
-dilation_rate = [(1, 1), (1, 1)] # No dilation
+layers = ['C', 'C', 'FC', 'FC']  
+n_output_channels = [1, 1]      
+layer_size = [3, 3, 3, 2]       
+activations = ['leakyrelu', 'leakyrelu', 'leakyrelu', 'softmax']  
+padding = [1, 1]                
+stride = [1, 1]                  
+dilation_rate = [(1, 1), (1, 1)]
 param_init = 'glorot'
 
-# Initialize and train the model
 nn = ConvNet(seed=seed)
 
 nn.train(
@@ -54,6 +45,6 @@ nn.train(
     activations=activations,
     dilation_rate=dilation_rate,
     param_init=param_init,
-    alpha=0.01,  # Reduced learning rate
+    alpha=0.01, 
     epochs=1000
 )
