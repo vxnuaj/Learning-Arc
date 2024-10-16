@@ -337,6 +337,7 @@ class ConvOps:
             
             dz = np.dot(w.T, z_2)
             dz = dz.reshape(*z_1.shape) * act_func(z_1, deriv = True) 
+            
             dw = ConvOps.__dw_grad_conv2D_util(dz, a_0, stride, batch_size, kernel.shape )
             db = (np.sum(dz, axis = (0, 2, 3)) / batch_size).reshape(-1, 1, 1)
            

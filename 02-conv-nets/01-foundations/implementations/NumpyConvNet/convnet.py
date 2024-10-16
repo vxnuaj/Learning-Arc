@@ -13,7 +13,7 @@ Each are in their respective lists:
     
 MAIN TODO
 
-- [ ] Build NumPy ConvNet
+- [X] Build NumPy ConvNet
     - [X] Convolutional Layers
     - [X] Fully Connected Layers
     - [X] Pooling Layers
@@ -21,9 +21,7 @@ MAIN TODO
     - [X] Backward Pass
     - [X] Gradient Descent
 - [X] Train on a small toy dataset
-- [ ] Try to Train on MNIST
-- [ ] Organize Code into Different Files
-- [ ] Define next steps (doing optimizers?, what are we doing?)
+- [X] Organize Code into Different Files
 
 --- don't forget to ship into git repo!
 
@@ -45,6 +43,7 @@ from neuralops import ConvOps as cops
 from neuralops import FCOps as fcops
 from functions import Functions as F
 from utils import validate_inputs
+from utils import Transforms as T
 from utils import Encoding as E
 
 class ConvNet:
@@ -117,7 +116,7 @@ class ConvNet:
         
 
         self.padding = padding
-        self.X = self._pad(X, self.padding[0])
+        self.X = T.pad(X, self.padding[0])
         self.y = y.reshape(1, -1)
         self.n_output_channels = n_output_channels
         self.layer_size = layer_size
@@ -139,19 +138,118 @@ class ConvNet:
 
         return self.weights, self.bias
 
-    def _gradient_descent(self):
+    def test(self, X_test, y_test, y_onehot_test = None):
        
+        self.X_test = T.pad(X_test, self.padding[0])
+        self.y_test = y_test.reshape(1, -1)
+        self.y_onehot_test = y_onehot_test
+       
+        prob = self._test() 
+        pred = np.argmax(prob, axis = 0)
+        loss = F.CrossEntropyLoss(self._y_onehot_test, prob)
+        
+        accuracy = F.Accuracy(self.y_test, pred)  
+      
+        print(f"Testing Loss: {loss} | Testing Accuracy: {accuracy}%") 
+        
+        return
+
+    def _gradient_descent(self):
+      
         for epoch in range(self.epochs):
             
-            logits = self._forward()
-            pred = np.argmax(logits, axis = 0)
-            loss = F.CrossEntropyLoss(self.y, logits)
+            prob = self._forward()
+            pred = np.argmax(prob, axis = 0)
+            loss = F.CrossEntropyLoss(self._y_onehot, prob)
+            
             accuracy = F.Accuracy(self.y, pred)
            
-            print(f"Epoch: {epoch + 1} | Loss: {loss} | Accuracy: {accuracy}")
+            print(f"Epoch: {epoch + 1} | Loss: {loss} | Accuracy: {accuracy}%")
 
             self._backward()
             self._update()
+
+    def _test(self): ### FORWARD PASS
+        
+        batch_size = self.X_test.shape[0]
+        self.__a_test = [0 for _ in range(self._n_layers)]
+        self.__z_test = [0 for _ in range(self._n_layers)]
+     
+        for l in range(self._n_layers):
+          
+           
+            if self.layers[l] == 'C': ### IF WE ARE AT A CONV LAYER
+                
+                kernel = self.weights[l]
+                b = self.bias[l]
+                stride = self.stride[l] 
+
+                if isinstance(self.activations, list):
+                    act_func = F.get_func(self.activations[l])
+                
+                else:
+                    act_func = F.get_func(self.activations)
+                
+                if l == 0:
+                    self.__z_test[l] = cops.conv2D(self.X_test, kernel, stride) + b
+                    self.__a_test[l] = act_func(self.__z_test[l])
+                
+                else:
+                    self.__z_test[l] = cops.conv2D(self.__a_test[l - 1], kernel, stride) + b
+                    self.__a_test[l] = act_func(self.__z_test[l])
+      
+            elif self.layers[l] == 'MP': ### IF WE'RE AT A MAX POOLING LAYER
+                
+                kernel = self.weights[l] 
+                stride = self.stride[l] 
+               
+                if l == 0:
+                   
+                    self.__a_test[l], self.__mp_indices[l] = cops.maxpool2D(self.X_test, kernel, stride, self.n_output_channels[l], return_idxs = True )
+                    self.__mp_indices[l] = self.__mp_indices[l].astype(int)
+
+                else: 
+                   
+                    self.__a_test[l], self.__mp_indices[l] = cops.maxpool2D(self.__a_test[l - 1], kernel, stride, self.n_output_channels[l], return_idxs = True) 
+                    self.__mp_indices[l] = self.__mp_indices[l].astype(int)
+      
+            elif self.layers[l] == 'AP': ### IF WE'RE AT AN AVERAGE POOLING LAYER
+              
+                kernel = self.weights[l]
+                stride = self.stride[l]
+                
+                if l == 0:
+                    self.__a_test[l] = cops.avgpool2D(self.X_test, kernel, stride, self.n_output_channels[l]) 
+
+                else:
+                    self.__a_test[l] = cops.avgpool2D(self.__a_test[l - 1], kernel, stride, self.n_output_channels[l])
+
+            elif self.layers[l] == 'FC': # IF WE'RE AT A FULLY CONNECTED LAYER
+                
+                w = self.weights[l]
+                b = self.bias[l]
+
+                if isinstance(self.activations, list):
+                    
+                    act_func = F.get_func(self.activations[l])
+                    
+                else:
+                    
+                    act_func = F.get_func(self.activations)
+
+                if self.layers[l - 1] in ['C', 'AP', 'MP']:
+                   
+                    a = self.__a_test[l - 1].reshape(batch_size, -1).T
+                  
+                    self.__z_test[l] = np.dot(w, a) + b
+                    self.__a_test[l] = act_func(self.__z_test[l])
+                  
+                else:
+                    
+                    self.__z_test[l] = np.dot(w, self.__a_test[l-1])
+                    self.__a_test[l] = act_func(self.__z_test[l]) 
+
+        return self.__a_test[-1]
 
     def _forward(self): ### FORWARD PASS
         
@@ -161,7 +259,7 @@ class ConvNet:
         self.__mp_indices = [0 for _ in range(self._n_layers)] 
        
         for l in range(self._n_layers):
-            
+           
             if self.layers[l] == 'C': ### IF WE ARE AT A CONV LAYER
                 
                 kernel = self.weights[l]
@@ -177,32 +275,11 @@ class ConvNet:
                 if l == 0:
                     self.__z[l] = cops.conv2D(self.X, kernel, stride) + b
                     self.__a[l] = act_func(self.__z[l])
-                    '''
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"INPUT: {self.X.shape}")
-                    print(f"KERNEL: {self.weights[l].shape}")
-                    print(f'STRIDE: {self.stride[l]}')
-                    print(f'OUTPUT: {self.__z[l].shape}')
-                    print('###########') 
-                    '''
+                   
                 else:
                     self.__z[l] = cops.conv2D(self.__a[l - 1], kernel, stride) + b
                     self.__a[l] = act_func(self.__z[l])
                   
-                    '''
-                   
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"INPUT: {self.__a[l-1].shape}")
-                    print(f"KERNEL: {self.weights[l].shape}")
-                    print(f'STRIDE: {self.stride[l]}')
-                    print(f'OUTPUT: {self.__z[l].shape}')
-                    print('###########')                     
-     
-                    '''               
       
             elif self.layers[l] == 'MP': ### IF WE'RE AT A MAX POOLING LAYER
                 
@@ -216,37 +293,11 @@ class ConvNet:
                     self.__a[l], self.__mp_indices[l] = cops.maxpool2D(self.X, kernel, stride, self.n_output_channels[l], return_idxs = True )
                     self.__mp_indices[l] = self.__mp_indices[l].astype(int)
 
-                    '''
-
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"INPUT: {self.__a[l-1].shape}")
-                    print(f"KERNEL: {self.weights[l]}")
-                    print(f'STRIDE: {self.stride[l]}')
-                    print(f'OUTPUT: {self.__a[l].shape}')
-                    print('###########')     
-
-                    '''
-
                 else: 
                    
                     self.__a[l], self.__mp_indices[l] = cops.maxpool2D(self.__a[l - 1], kernel, stride, self.n_output_channels[l], return_idxs = True) 
                     self.__mp_indices[l] = self.__mp_indices[l].astype(int)
       
-                    '''
-       
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"INPUT: {self.__a[l-1].shape}")
-                    print(f"KERNEL: {self.weights[l]}")
-                    print(f'STRIDE: {self.stride[l]}')
-                    print(f'OUTPUT: {self.__a[l].shape}')
-                    print('###########')      
-       
-                    ''' 
-        
             elif self.layers[l] == 'AP': ### IF WE'RE AT AN AVERAGE POOLING LAYER
               
                 kernel = self.weights[l]
@@ -255,35 +306,9 @@ class ConvNet:
                 if l == 0:
                     self.__a[l] = cops.avgpool2D(self.X, kernel, stride, self.n_output_channels[l]) 
 
-                    '''
-
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"INPUT: {self.__a[l-1].shape}")
-                    print(f"KERNEL: {self.weights[l]}")
-                    print(f'STRIDE: {self.stride[l]}')
-                    print(f'OUTPUT: {self.__a[l].shape}')
-                    print('###########') 
-
-                    ''' 
-                    
                 else:
                     self.__a[l] = cops.avgpool2D(self.__a[l - 1], kernel, stride, self.n_output_channels[l])
 
-                    '''
-
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"INPUT: {self.__a[l-1].shape}")
-                    print(f"KERNEL: {self.weights[l]}")
-                    print(f'STRIDE: {self.stride[l]}')
-                    print(f'OUTPUT: {self.__a[l].shape}')
-                    print('###########')              
-
-                    ''' 
-                    
             elif self.layers[l] == 'FC': # IF WE'RE AT A FULLY CONNECTED LAYER
                 
                 w = self.weights[l]
@@ -303,45 +328,15 @@ class ConvNet:
                     self.__z[l] = np.dot(w, a) + b
                     self.__a[l] = act_func(self.__z[l])
                   
-                    '''
-                   
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"INPUT: {self.__a[l-1].shape}")
-                    print(f'FLATTENED INPUT: {a.shape}')
-                    print(f"WEIGHTS: {self.weights[l].shape}")
-                    print(f'OUTPUT: {self.__z[l].shape}')
-                    print('###########')      
-                   
-                    ''' 
-                    
                 else:
                     
                     self.__z[l] = np.dot(w, self.__a[l-1])
                     self.__a[l] = act_func(self.__z[l]) 
 
-                    '''
-
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"INPUT: {self.__a[l-1].shape}")
-                    print(f"WEIGHTS: {self.weights[l].shape}")
-                    print(f'OUTPUT: {self.__z[l].shape}')
-                    print('###########')      
-                   
-                    ''' 
   
         return self.__a[-1]
         
     def _backward(self): ### BACKPROPAGATING GRADIENTS VIA CHAIN RULE
-
-        '''
-        print()
-        print('##### BACKPROP #####')
-        print()
-        '''
 
         self.__dz = [np.zeros_like(self.__a[l]) if l in ['FC', 'C'] else 0 for l, _ in enumerate(self.layers)]
         self.__dw = [np.zeros_like(self.__a[l]) if l in ['FC', 'C'] else 0 for l, _ in enumerate(self.layers)]
@@ -359,118 +354,40 @@ class ConvNet:
                     
                     self.__dz[l], self.__dw[l], self.__db[l] = fcops.grad_last_layer(self.y_onehot, self.__a, batch_size, l)
                     
-                    '''
-                    
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"DZ: {self.__dz[l].shape}")
-                    print(f"DW: {self.__dw[l].shape}")
-                    print(f"DB: {self.__db[l].shape}")
-                    print('###########') 
-                    
-                    
-                    '''
                 elif self.layers[l - 1] in ['MP', 'AP', 'C']: # IF THE FC LAYER IS RIGHT AFTER THE CONVOLUTIONAL BLOCK / THE CONVOLUTIONAL BLOCK IS RIGHT BEFORE THE GIVEN FC LAYER
                     
                     self.__dz[l], self.__dw[l], self.__db[l] = fcops.grad_cblock_prior(self.__a, self.weights, self.__z, batch_size, act_func, l)
                     
-                    '''
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"DZ: {self.__dz[l].shape}")
-                    print(f"DW: {self.__dw[l].shape}")
-                    print(f"DB: {self.__db[l].shape}")
-                    print('###########')  
-                    '''
                 else: # IF THE FC LAYER IS IN THE MIDDLE OF THE FC BLOCK    
                     
                     self.__dz[l], self.__dw[l], self.__db[l] = fcops.grad_fcblock(self.__a, self.weights, self.__z, batch_size, act_func, l) 
-                    '''
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"DZ: {self.__dz[l].shape}")
-                    print(f"DW: {self.__dw[l].shape}")
-                    print(f"DB: {self.__db[l].shape}")
-                    print('###########')  
-                    '''
-            
+                  
             elif self.layers[l] == 'C':
                 
                 if self.layers[l + 1] == 'FC': # IF THE LAYER AFTER THE CONVOLUTION LAYER IS AN FC LAYER
               
-                    
-                    self.__dz[l], self.__dw[l], self.__db[l] = cops.grad_convblock_from_fc(self.weights[l + 1], z_1 = self.__z[l], z_2 = self.__z[l+1], a_0 = self.__a[l - 1], kernel = self.weights[l], stride = self.stride[l], act_func=act_func)
+                    if l - 1 < 0: 
+                        self.__dz[l], self.__dw[l], self.__db[l] = cops.grad_convblock_from_fc(self.weights[l + 1], z_1 = self.__z[l], z_2 = self.__z[l+1], a_0 = self.X, kernel = self.weights[l], stride = self.stride[l], act_func=act_func)
+                    else:
+                        self.__dz[l], self.__dw[l], self.__db[l] = cops.grad_convblock_from_fc(self.weights[l + 1], z_1 = self.__z[l], z_2 = self.__z[l+1], a_0 = self.__a[l - 1], kernel = self.weights[l], stride = self.stride[l], act_func=act_func)
                       
-                    '''
-                    print('###########')
-                    print(f'Layer: {l+1}')
-                    print(f'Layer idx: {l}')
-                    print(f'DZ: {self.__dz[l].shape}') 
-                    print(f"DW: {self.__dw[l].shape}")
-                    print(f"DB: {self.__db[l].shape}")
-                    print('###########')
-                    '''  
-                
                 elif self.layers[l + 1] == 'C':
                
                     if l - 1 < 0:
                         
                         self.__dz[l], self.__dw[l], self.__db[l] = cops.grad_conv2D(self.__dz[l+1], self.__z[l], self.X, self.weights[l], self.weights[l + 1], self.stride[l + 1], self.n_output_channels[l], act_func, out_shape = self.__z[l].shape)
                       
-                        '''
-                        print('###########')
-                        print(f'Layer: {l+1}')
-                        print(f'Layer idx: {l}')
-                        print(f'DZ: {self.__dz[l].shape}') 
-                        print(f"DW: {self.__dw[l].shape}")
-                        print(f"DB: {self.__db[l].shape}")
-                        print('###########')
-                        ''' 
-                        
                     else:
                         self.__dz[l], self.__dw[l], self.__db[l] = cops.grad_conv2D(self.__dz[l+1], self.__z[l], self.__a[l-1], self.weights[l], self.weights[l+1], self.stride[l+1], self.n_output_channels[l], act_func, out_shape = self.__z[l].shape)
                   
-                        '''
-                        print('###########')
-                        print(f'Layer: {l+1}')
-                        print(f'Layer idx: {l}')
-                        print(f'DZ: {self.__dz[l].shape}') 
-                        print(f"DW: {self.__dw[l].shape}")
-                        print(f"DB: {self.__db[l].shape}")
-                        print('###########')
-                        ''' 
-                         
                 elif self.layers[l+ 1] == 'MP':
               
                     if l - 1 < 0:
                         
                         self.__dz[l], self.__dw[l], self.__db[l] = cops.grad_conv2D_from_maxpool(self.__dz[l+1], self.__z[l], self.X, self.__mp_indices[l+1], act_func, self.stride[l], self.weights[l])
 
-                        '''
-                        print('###########')
-                        print(f'Layer: {l+1}')
-                        print(f'Layer idx: {l}')
-                        print(f'DZ: {self.__dz[l].shape}') 
-                        print(f"DW: {self.__dw[l].shape}")
-                        print(f"DB: {self.__db[l].shape}")
-                        print('###########')
-                        ''' 
-                        
                     else:
                         self.__dz[l], self.__dw[l], self.__db[l] = cops.grad_conv2D_from_maxpool(self.__dz[l+1], self.__z[l], self.__a[l - 1], self.__mp_indices[l + 1], act_func, self.stride[l], self.weights[l])
-                    
-                        '''
-                        print('###########')
-                        print(f'Layer: {l+1}')
-                        print(f'Layer idx: {l}')
-                        print(f'DZ: {self.__dz[l].shape}') 
-                        print(f"DW: {self.__dw[l].shape}")
-                        print(f"DB: {self.__db[l].shape}")
-                        print('###########') 
-                        ''' 
                     
                 elif self.layers[l + 1] == 'AP':
              
@@ -478,29 +395,9 @@ class ConvNet:
 
                         self.__dz[l], self.__dw[l], self.__db[l] = cops.grad_conv2D_from_avgpool(self.__dz[l+1], self.__z[l], self.X, self.weights[l], self.stride[l], act_func)  
            
-                        '''
-                        print('###########')
-                        print(f'Layer: {l+1}')
-                        print(f'Layer idx: {l}')
-                        print(f'DZ: {self.__dz[l].shape}') 
-                        print(f"DW: {self.__dw[l].shape}")
-                        print(f"DB: {self.__db[l].shape}")
-                        print('###########') 
-                        ''' 
-             
                     else:
                      
                         self.__dz[l], self.__dw[l], self.__db[l] = cops.grad_conv2D_from_avgpool(self.__dz[l+1], self.__z[l], self.__a[l-1], self.weights[l], self.stride[l], act_func) 
-                       
-                        '''
-                        print('###########')
-                        print(f'Layer: {l+1}')
-                        print(f'Layer idx: {l}')
-                        print(f'DZ: {self.__dz[l].shape}') 
-                        print(f"DW: {self.__dw[l].shape}")
-                        print(f"DB: {self.__db[l].shape}")
-                        print('###########')
-                        ''' 
                
             elif self.layers[l] == 'MP':
                 
@@ -508,14 +405,6 @@ class ConvNet:
                    
                     self.__dz[l] = cops.grad_convblock_from_fc(self.weights[l + 1], z_2 = self.__z[l + 1], a_1 = self.__a[l], layer = 'MP', act_func = act_func)
 
-                    '''
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"DZ: {self.__dz[l].shape}")
-                    print('###########')  
-                    '''
-                    
                 elif self.layers[l + 1] == 'C': # if the layer after the maxpool layer was the conv layer.
                     
                     '''
@@ -534,13 +423,6 @@ class ConvNet:
 
                     self.__dz[l] = cops.grad_maxpool2D(self.__dz[l+1], self.weights[l+1], self.stride[l+1], self.n_output_channels[l], self.__a[l].shape) 
                   
-                    '''
-                    print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"DZ: {self.__dz[l].shape}")
-                    print('###########')  '''
-                     
             elif self.layers[l] == 'AP':
                 
                 '''
@@ -550,29 +432,15 @@ class ConvNet:
                 https://stackoverflow.com/questions/70691539/how-does-error-get-back-propagated-through-pooling-layers               
                 https://stats.stackexchange.com/questions/565032/cnn-upsampling-backprop-gradients-across-average-pooling-layer  
                
-                DON'T FORGET ABOUT SCENEARIOS WHERE THE KERNEL DOESN'T FIT ONTO THE FEATURE MAP FOR EVERY STRIDE
-                                
                 '''
                 
                 if self.layers[l + 1] == 'FC':
                  
                     self.__dz[l] = cops.grad_convblock_from_fc(self.weights[l + 1], z_2 = self.__z[l + 1], a_1 = self.__a[l], layer = 'AP', act_func = act_func)  
                    
-                    '''print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"DZ: {self.__dz[l].shape}")
-                    print('###########')  '''
-                    
                 elif self.layers[l + 1] == 'C': 
                     
                     self.__dz[l] = cops.grad_avgpool2D(self.__dz[l+1], self.weights[l+1], self.stride[l+1], self.n_output_channels[l], self.__a[l].shape)
-                    
-                    '''print('###########')
-                    print(f"Layer: {l + 1}") 
-                    print(f"Layer idx: {l}")
-                    print(f"DZ: {self.__dz[l].shape}")
-                    print('###########')  '''
         
         return
    
@@ -610,7 +478,7 @@ class ConvNet:
                 elif _bool: # Dilated kernel if dilation is expected
                     
                     kernel_mask = self._init_kernel(l)
-                    weights.append(self._dilate_kernel(kernel_mask, l))
+                    weights.append(T.dilate_kernel(kernel_mask, self.dilation_rate[l]))
                 
                 bias.append(np.zeros(shape = (self.n_output_channels[l], 1, 1)))
               
@@ -625,11 +493,6 @@ class ConvNet:
                     
                 else:
                     
-                    print('here') 
-                    print(f'inputsize: {conv_out_dims[l-1]}') 
-                    print(f'kernel size: {weights[l].shape[2:4]}')
-                    print(f'stride: {self.stride[l]}')
-                     
                     conv_out_dims.append(self._out_feat_map_size(
                             input_size = conv_out_dims[l - 1],
                             kernel_size = weights[l].shape[2:4],
@@ -666,38 +529,6 @@ class ConvNet:
       
         return weights, bias   
     
-     
-    def _pad(self, X, padding):
-        return np.pad(X, pad_width = ((0, 0), (0, 0), (padding[0], padding[0]), (padding[0], padding[0])))
-
-    def _dilate_kernel(self, kernel_mask, l):
-        '''
-        kernel_mask: shape (Out Channels, In Channels, H, W)
-        l: the lth layer
-        '''
-        
-        if kernel_mask.shape[2] == 1 and kernel_mask.shape[3] == 1:
-            return kernel_mask
-        
-        d_h = self.dilation_rate[l][0] 
-        d_w = self.dilation_rate[l][1] 
-        
-        k_h = (kernel_mask.shape[2] - 1) * d_h + 1
-        k_w = (kernel_mask.shape[3] - 1) * d_w + 1
-        
-        out_kernel = np.zeros((kernel_mask.shape[0], kernel_mask.shape[1], k_h, k_w))
-        
-        for out_ch in range(kernel_mask.shape[0]):
-            for in_ch in range(kernel_mask.shape[1]):
-                for row in range(kernel_mask.shape[2]):
-                    for col in range(kernel_mask.shape[3]):
-                        out_row = row * d_h
-                        out_col = col * d_w
-                        
-                        out_kernel[out_ch, in_ch, out_row, out_col] = kernel_mask[out_ch, in_ch, row, col]
-        
-        return out_kernel
- 
     def _init_kernel(self, l):
         
          
@@ -729,12 +560,6 @@ class ConvNet:
                 h, w = conv_out_dims[l - 1] 
                 conv_out_size = self.n_output_channels[l - 1] * h * w
                
-                # TODO FIX ERROR
-
-                print(self.layer_size[l]) 
-                print(conv_out_size) 
-                print(conv_out_dims[l-1])
-                
                 weights = np.random.randn(self.layer_size[l], conv_out_size ) * np.sqrt(1/(conv_out_size))            
                 
             else:
@@ -897,13 +722,13 @@ class ConvNet:
         if y_onehot is None:
             y_onehot = E.one_hot_encode(self.y) 
         self._y_onehot = y_onehot
-            
-if __name__ == "__main__":
+        
+    @property
+    def y_onehot_test(self):
+        return self._y_onehot_test
     
-    seed = 1
-  
-    X = np.random.random_sample(size = (2, 2, 2, 2))
-    
-    padding = ((1, 1), 1, (0, 0)) 
-    
-    nn = ConvNet(seed = seed)
+    @y_onehot_test.setter
+    def y_onehot_test(self, y_onehot_test):
+        if y_onehot_test is None:
+            y_onehot_test = E.one_hot_encode(self.y_test)
+        self._y_onehot_test = y_onehot_test

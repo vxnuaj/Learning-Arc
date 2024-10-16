@@ -9,6 +9,42 @@ class Encoding:
         y_onehot[y, numpy.arange(y.size)] = 1
         return y_onehot
 
+class Transforms:
+    
+    @staticmethod
+    def dilate_kernel(kernel_mask, dilation_rate):
+        '''
+        kernel_mask: shape (Out Channels, In Channels, H, W)
+        l: the lth layer
+        '''
+        
+        if kernel_mask.shape[2] == 1 and kernel_mask.shape[3] == 1:
+            return kernel_mask
+        
+        d_h = dilation_rate[0] 
+        d_w = dilation_rate[1] 
+        
+        k_h = (kernel_mask.shape[2] - 1) * d_h + 1
+        k_w = (kernel_mask.shape[3] - 1) * d_w + 1
+    
+        out_kernel = numpy.zeros((kernel_mask.shape[0], kernel_mask.shape[1], k_h, k_w))
+        
+        for out_ch in range(kernel_mask.shape[0]):
+            for in_ch in range(kernel_mask.shape[1]):
+                for row in range(kernel_mask.shape[2]):
+                    for col in range(kernel_mask.shape[3]):
+                        out_row = row * d_h
+                        out_col = col * d_w
+                        
+                        out_kernel[out_ch, in_ch, out_row, out_col] = kernel_mask[out_ch, in_ch, row, col]
+        
+        return out_kernel 
+
+    @staticmethod
+    def pad(X, padding):
+        return numpy.pad(X, pad_width = ((0, 0), (0, 0), (padding[0], padding[0]), (padding[0], padding[0])))
+
+         
 def validate_inputs(
        
         X: numpy.ndarray,
@@ -35,7 +71,7 @@ def validate_inputs(
         assert len(X.shape) == 4, 'X must be shape (B, C, H, W)'
         
         assert isinstance(y, numpy.ndarray), 'y must be an 1-dimensional numpy array'
-        assert len(y.shape) == 1, 'y must be shape (B, 1)'
+        assert len(y.shape) == 1 or len(y.shape) == 2, 'y must be shape (B, 1) or simply (B, )'
     
         assert isinstance(layers, list), "layers must be a list"
         for i, layer in enumerate(layers):

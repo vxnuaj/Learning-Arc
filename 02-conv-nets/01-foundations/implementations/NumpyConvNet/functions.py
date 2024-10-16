@@ -66,8 +66,8 @@ class Functions:
     
 
     @staticmethod
-    def CrossEntropyLoss(y, logits ):
-        return - np.sum(y * np.log(logits + Functions.eps)) / y.size
+    def CrossEntropyLoss(y, prob ):
+        return - np.sum(y * np.log(prob + Functions.eps)) / y.size
     
     @staticmethod
     def Accuracy(y, pred):
