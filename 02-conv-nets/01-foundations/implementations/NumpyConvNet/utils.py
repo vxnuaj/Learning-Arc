@@ -26,6 +26,8 @@ def validate_inputs(
         n_conv_layers: int,
         n_conv_block_layers: int,
         n_fc_layers: int,
+        alpha:int|float,
+        epochs: int
         
     ):
    
@@ -99,6 +101,11 @@ def validate_inputs(
                 if isinstance(dilation, (int, float)):
                     assert isinstance(dilation, int), f'Dilation rate must be type int, got {type(dilation)} at index {i}'
                     assert dilation >= 1, f"Dilation rate must be at least 1 if defined, instead got {dilation} at index {i}"
-        
+       
         assert isinstance(param_init, str), 'param_init must be type str, of "glorot" or "kaiming".'
         assert param_init in ['glorot', 'kaiming'], 'param_init must be "glorot" or "kaiming".'
+        
+        assert isinstance(alpha, (float, int)), 'alpha must be type int or float'
+        
+        assert isinstance(epochs, int), 'epochs must be type int'
+        assert epochs > 0, 'you cannot have negative epochs. might as well not train your model!'

@@ -35,7 +35,21 @@ While the transposed convolution can upsample a given $\hat{X}$ back into the or
 
 > even if u use the same kernel, will be different **X**
 
+For example, where
 
+```math
+W * X = Z
+```
+
+is the convolution of kernel, $W$, slid over $X$ to yield $Z$.
+
+The transposed convolution computes:
+
+```math
+
+W \hspace{1mm}\hat{*}\hspace{1mm}Z = \hat{X}
+
+```
 
 Say you have $\hat{X}$ as the $X$ post-convolution with $\mathcal{K}$.
 
