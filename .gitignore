@@ -2,3 +2,4 @@ notebooks/*
 data/*
 backlog/*
 backlog
+02-conv-nets/01-foundations/implementations/NumpyConvNet/data
