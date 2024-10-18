@@ -1,12 +1,5 @@
 ## Upsampling
 
-Learn:
-
-- [X] Nearest Neighbor Interpolation
-- [X] Max Unpooling
-- [X] Bilinear Interpolation
-- [X] Bicubic Interpolation
-
 **Upsampling**, in the context of Convolutional Neural Networks, is the opposite of down sampling (pooling), where instead of reducing the dimensionality of our activations, we want to increase the dimensionality of the input feature maps.
 
 A specific application for this is image segmentation, such as semantic, instance, or panoptic segmentation, which makes use of an encoder-decoder architecture.
