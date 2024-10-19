@@ -266,8 +266,7 @@ This is generally a good rule of thumb (though can be volatile for other archite
 
 <details><summary>More on PCA-based color Augmentation</summary> 
 
-- [ ] code??
-- [ ] poast?
+- [ ] NEED TO REVIEW SOME PORTIONS ARE WRONG.
 
 $\text{PCA}$ based color augmentation plays an important role in computer vision to introduce a set of distortions to the RGB values of a given image, to allow your model to learn from a variety of data.
 
@@ -288,11 +287,11 @@ The values on the diagonal of $\Sigma$ correspond to the $n$ singular values (sq
 
 > Note, that we're limited to $n$ singular values, as they represent the positive non-zero eigenvalues, denoting the rank of the matrix, $X$ (we're limited to positive $\sigma$ / $\lambda$ as in PCA, the co-variance matrix only has positive $\sigma$ / $\lambda$'s). If we were reducing dimensionality via PCA, we'd want to reduce $X$ such that columns become linearly independent and don't have redundancy in data.
 
-But unfortunately, we can't get eigenvalues via the $\text{SVD}$ directly. Note that the $\text{SVD}$ makes use of the eigenvectors of $\frac{X^TX}{n - 1}$ as the principal components therefore we can't simply square $\Sigma$ to get $\Lambda$ (eigenvalue matrix).
+But unfortunately, we can't get eigenvalues via the $\text{SVD}$ directly. Note that the $\text{SVD}$ makes use of the eigenvectors of $X^TX$ as the principal components and therefore it's $\lambda$'s correspond to $X^TX$, therefore we can't simply directly square $\Sigma$ to get $\Lambda$ (eigenvalue matrix) of the original $X$.
 
 But we can do so via Eigendecomposition
 
-1. Find the covariance matrix of $X$ as $C = \frac{X^TX}{n - 1}$
+1. Find the covariance matrix of $X$ as $C = \frac{X^TX}{k - 1}$
 2. Find the eigenvalues and eigenvectors of $C$, such that $C = P\Lambda P^{-1}$ 
 
 The eigenvectors of $C$ correspond to the $n$ principal components alongside the $n$ eigenvalues.
