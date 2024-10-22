@@ -1,10 +1,6 @@
 # Network in Network
 
-TODO
-
-- [ ] Implement
-
-The issue with the previous LeNet, AlexNet, and VGGNet architectiures were that
+The issue with the previous LeNet, AlexNet, and VGGNet architectures were that
 
 1. Their FC layers consume a tremendous amount of parameters (400MB for VGG WEights at FC Layers)
    1. No ability to work on smaller devices such as phones
