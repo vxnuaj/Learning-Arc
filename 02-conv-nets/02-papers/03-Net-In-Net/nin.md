@@ -54,6 +54,7 @@ f_{i, j, k}^n = max(w_k^T f_{i, j}^{n - 1} + b_{k}, 0)
   - Introduces more invariance to shifts in the input image, as we're summarizing ALL info from a feature map, removing the importance of spatial positioning.
   
 - Networks used for testing consisted of three stacked mlpconv layers, followed by a max-pooling layer to sample the input iamge down by a factor of two ($3 \times 3, s = 2$)
+- Each mlpconv layer, can essentially be seen as as $1 \times 1$ convolution, enabling the "depth-wise parametric pooling"
 - $\Theta$'s initialized as $\sim \mathcal{N}(0, .01)$ while $\beta = 0$
 - Dropout is applied on all outputs of mlpconv layers besides the output.
 - Weight decay!
