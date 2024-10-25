@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.optim as opt
 import torch.nn.functional as F
@@ -55,3 +56,6 @@ class AlexNet(nn.Module):
         x = self.fc3(x)
        
         return x 
+
+
+         

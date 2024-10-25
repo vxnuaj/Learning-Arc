@@ -2,8 +2,6 @@
 <br>
 <br>
 
-- [ ] Local Response Normalization (Read Paper First, get to it as you get there.).
-
 # AlexNet
 
 Prior to modern day Computer Vision, machine learning (not even dl yet), wasn't about the algorithm but rather about the pre-processing pipelines and feature extractors that were used to prepare a given dataset.
