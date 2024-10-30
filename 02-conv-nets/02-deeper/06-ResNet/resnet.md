@@ -1,16 +1,16 @@
 # Residual Networks
 
-Say $\mathcal{F}$ is the set of functions that our neural network can precisely reaach.
+Say $\mathcal{F}$ is the set of functions that our neural network can precisely reach.
 
 For all $f \in \mathcal{F}$, there is a set of parameters, $\Theta$ that can be obtained by training the neural network.
 
-Assume $f^*$ is the truth function we need to properly classify all $x \in \mathcal{X}$ to the proper $y \in \mathcal{Y}$.
+Assume $f^\text{*}$ is the truth function we need to properly classify all $x \in \mathcal{X}$ to the proper $y \in \mathcal{Y}$.
 
-If $f^*$ resides within $\mathcal{F}$, then the model can reach $f^*$ and it's appropriate for the problem we're solving with the neural network.
+If $f^\text{*}$ resides within $\mathcal{F}$, then the model can reach $f^\text{*}$ and it's appropriate for the problem we're solving with the neural network.
 
-Typically, we aren't so lucky so we attempt to find a given $f_{\mathcal{F}}^*$, which represents the best approximation for $f^*$, subject to $f_\mathcal{F}^* \in \mathcal{F}$.
+Typically, we aren't so lucky so we attempt to find a given $f_{\mathcal{F}}^\text{*}$, which represents the best approximation for $f^\text{*}$, subject to $f_\mathcal{F}^\text{*} \in \mathcal{F}$.
 
-If we're able to switch to a more powerful architectural design, say $\mathcal{F}'$, we should be able to arrive at a beter outcome for approximating $f^*$, as $f_{\mathcal{F}'}^*$.
+If we're able to switch to a more powerful architectural design, say $\mathcal{F}'$, we should be able to arrive at a beter outcome for approximating $f^\text{*}$, as $f_{\mathcal{F}'}^\text{*}$.
 
 But say, $\mathcal{F}' \not\in \mathcal{F}$, meaning it is not a subset of $\mathcal{F}$.
 
@@ -18,13 +18,13 @@ There is no guarantee that $\mathcal{F}'$ won't deviate in a random direction aw
 
 > This is the issue with non-nested function classes, instead you should be expanding on your current architecture (treating it as your best explanation for the proper function space), to get a better $\mathcal{F'} \in \mathcal{F}$
 
-While if $\mathcal{F}' \in \mathcal{F}$, we'll only be searching within the existing function space of $\mathcal{F}$, such that we can land within a more precise approximation of a better $f^*$, as $f^*_{\mathcal{F}'}$, ultimately improving on our existing hypothesis.
+While if $\mathcal{F}' \in \mathcal{F}$, we'll only be searching within the existing function space of $\mathcal{F}$, such that we can land within a more precise approximation of a better $f^\text{*}$, as $f^\text{*}_{\mathcal{F}'}$, ultimately improving on our existing hypothesis.
 
-> This assumes that $\mathcal{F}$ is already our best hypothesis for the function space that contains the best $f^*_{\mathcal{F}}$, such that we can iterate by choosing a $\mathcal{F'} \in \mathcal{F}$. Otherwise, we wouldn't neccesarily want $\mathcal{F}' \in \mathcal{F}$ and might want to search within an entirely different function space.
+> This assumes that $\mathcal{F}$ is already our best hypothesis for the function space that contains the best $f^\text{*}_{\mathcal{F}}$, such that we can iterate by choosing a $\mathcal{F'} \in \mathcal{F}$. Otherwise, we wouldn't neccesarily want $\mathcal{F}' \in \mathcal{F}$ and might want to search within an entirely different function space.
 
 Say we construct $\mathcal{F}'$ such that it is larger than $\mathcal{F}$ and $\mathcal{F} \in \mathcal{F}'$. This strictly increases the expressiveness of our neural network, while still containint the original best explanation of the function space $\mathcal{F}$. 
 
-Then, we may be able to get a better approximation for $f^*$ without destroying our original hypothesis.
+Then, we may be able to get a better approximation for $f^\text{*}$ without destroying our original hypothesis.
 
 > You want to make your models deeper, building on your best explanations for the bset architecutre. This is why initial conditions become your root cause for building the best solutions.
 
