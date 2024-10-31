@@ -126,3 +126,74 @@ We aren't forced to learn complex transformations denoted by a complex $\mathcal
     - Expressed via convolutions, this can be equivalent to $1 \times 1$ convolutions with $\mathcal{K}$, where we decrease the channel size to the desired channel count.
     - Then $W_s$ or $\mathcal{K}$ can be learnt parameters.
     - In the ResNet shown in the paper, their $1 \times 1$ convolutions were applied with a stride of $2$ such that they effectively reduce the dimensions of the model to properly fit the desired size.
+    - They use $\text{PCA}$ pixel based RGB augmentation (see [here](https://www.vxnuaj.com/blog/PCAaug))
+    - They use Batchnorm after each convolution prior to each activation and after eacih convolution.
+    - They use Xavier Initialization.
+
+## Identity Mappings in Deep Residual Networks
+
+*"The difference in Resnet and ResNetV2 rests in the structure of their individual building blocks. In ResNetV2, the batch normalization and ReLU activation precede the convolution layers, as opposed to ResNetV1 where the batch normalization and ReLU activation are applied after the convolution layers."*
+
+### Introduction
+
+- We analyze deep residual netowrks by creating a "direct" path for propagating gradients -- not only within a given residual unit but through the entire network.
+
+- Notation
+  - $h(x_l)$ is the identity mapping, such that $= x_l$
+  - $y_l$ is the output of the residual unit prior to $f$
+  - $f$ is $\text{ReLU}$
+
+- Derivations show that if $h(x_l)$ and $f(y_l)$ both become identity mappings, the gradient could be propagated from one unit to any other unit in forward and backward passes.
+ 
+- After analyzing various verions of $h(x_l)$, such as $I$, gating (via activastion), or $1 \times 1$, they found that the the skip connections as $I$ was the best for fastest error reduction and lowest training loss.
+
+- Using Batchnorm $\text{BN}$ and $f$ as as pre-activation, prior to a convolution rather than after, allows for $f(y_l)$ and $h(x_l)$ to be identity mappings such that they lead to a new residual unit design.
+  - They fine improvements on Cifar with a 1001-layer ResNet and ImageNet with a 200-layer ResNet
+
+### Analysis of Deep Residual Networks
+
+The original residual unit is given as:
+
+```math
+
+y_l = h(x_l) + \mathcal{F}(x_l, \mathcal{W_l})
+\\[3mm]
+x_{l + 1} = f(y_l)
+```
+
+If $f$ was an identity mapping, then we can rewrite as:
+
+```math
+
+x_{l+1} = x_l + \mathcal{F}(x_l, \mathcal{W_l})
+
+```
+
+and then recursively as:
+
+```math
+
+x_{l+2} = x_{l+1} + \mathcal{F}(x_{l+1}, \mathcal{W_{l+1}}) = x_l + \mathcal{F}(x_{l}, \mathcal{W_{l}}) + \mathcal{F}(x_{l+1}, \mathcal{W_{l+1}}) 
+
+```
+
+given that
+
+```math
+
+x_{l+1} = x_l + \mathcal{F}(x_l, \mathcal{W_l})
+
+```
+
+so it can be ultimately expressed as
+
+```math
+
+x_L = x_l + \sum_{i = l}^{L = 1} \mathcal{F}(x_i, \mathcal{W}_i)
+
+```
+
+- This can be done for any deeper unit, $l$.
+
+> Essentially, given the original residual connection as $x_l$, you can simply concatenate the residual transformation, $\mathcal{F}(x_l, \mathcal{W}_l)$ for all $l$ layers up to the current $l$, such that you get back the current output for the current $l$ ... why did they do all that just to explain this lol.
+
