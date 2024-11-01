@@ -71,5 +71,7 @@ class NiN(nn.Module):
         x = self.NIN3(x)
         x = self.NIN4(x)
         y = F.softmax(x)
+        
+        return y
              
         
