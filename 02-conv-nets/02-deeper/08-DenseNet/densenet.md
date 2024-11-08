@@ -16,8 +16,13 @@ DenseNet, is similar to the former and the latter in the sense that the model, $
 
 The difference is that instead of adding an input to a given layer, $f_l$, as $f_l(x) + x$, instead there's a channel-wise concatenation, $[f_l, x]$, within a DenseBlock.
 
-DenseNet is made up of two parts.  - DenseBlocks
+This allows for each $l + 1$ layer in a DenseBlock, to learn a more diverse set of features than $l$.
+
+DenseNet is made up of two parts.  
+
+- DenseBlocks
 - Transition Layers
+  - Serve as the means to downsample the channel dimension ($1 \times 1$ Convs) and the spatial dimension (via AvgPooling, $\mathcal{K} = 2, \text{stride} = 2$)
 
 ### DenseBlocks
 
