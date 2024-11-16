@@ -1,0 +1,61 @@
+import torch.nn as nn
+
+class BasicConv2d(nn.Module):
+
+    def __init__(
+
+        self, 
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride = 1,
+        padding = 0,
+        groups = 1,
+        batch_norm = True,
+        non_linearity = 'h_swish'
+
+    ):
+
+        super().__init__()
+
+        self.non_linearity = non_linearity.lower()
+
+        self.conv = nn.Conv2d(
+
+            in_channels = in_channels,
+            out_channels = out_channels,
+            kernel_size = kernel_size,
+            stride = stride,
+            padding = padding,
+            groups = groups
+
+            )
+
+        if batch_norm:
+
+            self.batch_norm = nn.BatchNorm2d(
+
+                num_features = out_channels 
+
+            )
+
+        if self.non_linearity == 'h_swish':
+
+            self.non_linearity = nn.Hardswish()
+
+        elif self.non_linearity == 'relu':
+
+            self.non_linearity = nn.ReLU()
+
+
+    def forward(self, x):
+
+        x = self.conv(x)
+        
+        if self.batch_norm:
+            
+            x = self.batch_norm(x)
+
+        x = self.non_linearity(x)
+
+        return x

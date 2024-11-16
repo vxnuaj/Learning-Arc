@@ -1,5 +1,7 @@
 # Dynamic Learning Rate Adjustment Based on Linear Approximation Error
 
+> Actually, doing it based on Quadratic Approximation seems better -- by analyzing the Hessian Matrix (see here: https://openreview.net/pdf?id=rTAclwH46Tb)
+
 ## Concept Overview
 
 The idea is to dynamically adjust the learning rate in gradient descent based on the error between the actual loss function $L(\Theta)$ and its linear approximation around a given point $\Theta_0$.

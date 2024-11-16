@@ -8,7 +8,7 @@ x = torch.randn(size = (3, 3, 224, 224))
 
 # init model
 
-model = DenseNet()
+model = DenseNet( k = 40, theta = .5)
 
 # get summary and final output shape
 

@@ -1,26 +1,24 @@
 import torch
 import torch.nn as nn
+from SEBlock import SEBlock
 
 '''
 
-NOTE
-
-For this implementation of ResNet V2, we apply ReLU and BatchNorm as pre-activations. 
-For the residual connections, given the change in dimensionalitys we get deeper, we must apply 1x1 convs with stride = 2, to reduce spatial dimensions from H x W to ( H x W) / 2. 
-The rest of the residual connections are purely identity.
+Implementation of SEResNet, ResNetV2 with Squeeze-and-Excitation Blocks
 
 '''
 
 
-class ResNetV2(nn.Module):
+class SEResNet(nn.Module):
    
     '''
     
     Input: Nx3x224x224 where N > 1, such that BatchNorm actually works lol.
+    reduct_ratio: Reduction Ratio for the SEBlock
     
     '''
     
-    def __init__(self):
+    def __init__(self, reduct_ratio):
         
         super().__init__()
         
@@ -29,38 +27,38 @@ class ResNetV2(nn.Module):
       
         self.resblock_64 = nn.Sequential(
             
-            ResBlock(in_channels = 64, out_channels = 64),
-            ResBlock(in_channels = 64, out_channels = 64),
-            ResBlock(in_channels = 64, out_channels = 64), 
+            ResBlock(in_channels = 64, out_channels = 64, reduct_ratio = reduct_ratio),
+            ResBlock(in_channels = 64, out_channels = 64, reduct_ratio = reduct_ratio),
+            ResBlock(in_channels = 64, out_channels = 64, reduct_ratio = reduct_ratio), 
             
         )
         
         self.resblock_128 = nn.Sequential(
             
-            ResBlock(in_channels = 64, out_channels = 128, dim_reduct = True),
-            ResBlock(in_channels = 128, out_channels = 128),
-            ResBlock(in_channels = 128, out_channels = 128),
-            ResBlock(in_channels = 128, out_channels = 128) 
+            ResBlock(in_channels = 64, out_channels = 128, reduct_ratio = reduct_ratio, dim_reduct = True), 
+            ResBlock(in_channels = 128, out_channels = 128, reduct_ratio = reduct_ratio),
+            ResBlock(in_channels = 128, out_channels = 128, reduct_ratio = reduct_ratio),
+            ResBlock(in_channels = 128, out_channels = 128, reduct_ratio = reduct_ratio) 
             
         )
        
         self.resblock_256 = nn.Sequential(
             
-            ResBlock(in_channels = 128, out_channels = 256, dim_reduct = True),
-            ResBlock(in_channels = 256, out_channels = 256),
-            ResBlock(in_channels = 256, out_channels = 256),
-            ResBlock(in_channels = 256, out_channels = 256),
-            ResBlock(in_channels = 256, out_channels = 256),
-            ResBlock(in_channels = 256, out_channels = 256)
+            ResBlock(in_channels = 128, out_channels = 256, reduct_ratio = reduct_ratio, dim_reduct = True),
+            ResBlock(in_channels = 256, out_channels = 256, reduct_ratio = reduct_ratio),
+            ResBlock(in_channels = 256, out_channels = 256, reduct_ratio = reduct_ratio),
+            ResBlock(in_channels = 256, out_channels = 256, reduct_ratio = reduct_ratio),
+            ResBlock(in_channels = 256, out_channels = 256, reduct_ratio = reduct_ratio),
+            ResBlock(in_channels = 256, out_channels = 256, reduct_ratio = reduct_ratio)
 
         ) 
 
         
         self.resblock_512 = nn.Sequential(
             
-            ResBlock(in_channels = 256, out_channels = 512, dim_reduct = True),
-            ResBlock(in_channels = 512, out_channels = 512),
-            ResBlock(in_channels = 512, out_channels = 512) 
+            ResBlock(in_channels = 256, out_channels = 512, reduct_ratio = reduct_ratio, dim_reduct = True),
+            ResBlock(in_channels = 512, out_channels = 512, reduct_ratio = reduct_ratio),
+            ResBlock(in_channels = 512, out_channels = 512, reduct_ratio = reduct_ratio) 
             
         )
        
@@ -83,12 +81,19 @@ class ResNetV2(nn.Module):
        
 class ResBlock(nn.Module):
     
-    def __init__(self, in_channels, out_channels, dim_reduct:bool = False):
+    def __init__(self, in_channels, out_channels, reduct_ratio, dim_reduct:bool = False): 
         
         super().__init__() 
       
         self.dim_reduct = dim_reduct 
-       
+      
+        self.seblock = SEBlock(
+
+            channels = out_channels,
+            reduct_ratio = reduct_ratio
+
+        )
+
         self.resconnect = nn.Identity()
         self.relu = nn.ReLU()
 
@@ -116,17 +121,25 @@ class ResBlock(nn.Module):
     def forward(self, x):
         
         if self.dim_reduct:
-            
-            x_out = self.resblck_reduct(x) + self.resconnect_reduct(x)
+         
+              
+            x_out = self.resblck_reduct(x)
+            x_out = self.seblock(x_out)
+            x = self.resconnect_reduct(x)
+          
+            x_out += x
        
         else:
-            
-            x_out = self.resblock(x) + self.resconnect(x)
-            
+ 
+
+            x_out = self.resblock(x)
+            x_out = self.seblock(x_out)
+            x = self.resconnect(x)
+
+            x_out += x
+
         return x_out
 
-        
-        
 class BasicConv2d(nn.Module):
     
     def __init__(self, in_channels, out_channels, kernel_size, stride = 1, padding = 0, res = True):

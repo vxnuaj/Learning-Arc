@@ -7,10 +7,6 @@ Implementation of DenseNet-264 (BC), for 224 x 224 images.
 
 Ref -- Table 1 @ https://arxiv.org/pdf/1608.06993
 
-TODO
-
-- [ ] Implement with \theta * m style compression
-
 '''
 
 class DenseNet(nn.Module):
@@ -62,7 +58,7 @@ class DenseNet(nn.Module):
       
         self.tran_blk_1 = Transition(
            
-            in_channels = 2 * k + 6 * k,
+            in_channels = 8 * k,
             theta = theta 
             
         ) 
@@ -72,26 +68,67 @@ class DenseNet(nn.Module):
            
             k = k, 
             layers = 12, 
-            in_channels = 256 * theta,
+            in_channels = (8 * k) * theta,
             theta = theta 
             
             )
-       
+     
         self.tran_blk_2 = Transition(
             
-            in_channels = (2 * k + 6 * k),
+            in_channels = 12 * k + (8 * k) * theta,
             theta = theta
             
         ) 
+
+        self.dense_blk_3 = DenseBlock(
+            
+            k = k,
+            layers = 64, 
+            in_channels = (12 * k + (8 * k) * theta) * theta, 
+            theta = theta 
+        )
+
+        self.tran_blk_3 = Transition(
+            
+            in_channels = ((12 * k + (8 * k) * theta) * theta) + 64 * k,
+            theta = theta 
+            
+        )
+        
+        self.dense_blk_4 = DenseBlock(
+            
+            k = k,
+            layers = 48, 
+            in_channels = (((12 * k + (8 * k) * theta) * theta) + 64 * k) * theta,
+            theta = theta
+            
+        )
+        
+        self.avgpool_1_out = nn.AdaptiveAvgPool2d(output_size = (1, 1))
+
+        self.fc = nn.Linear(
+            
+            in_features = int((((12 * k + (8 * k) * theta) * theta) + 64 * k) * theta),
+            out_features = 1000
+            
+            )
+        
+        nn.init.kaiming_normal_(self.fc.weight, nonlinearity = 'relu') # kaiming init.
 
     def forward(self, x):
         
         x = self.conv_1_in(x)
         x = self.maxpool_1_in(x)
-        x_dense_1 = self.dense_blk_1(x)
-        x_tran_1 = self.tran_blk_1(x_dense_1)
-        x = self.dense_blk_2(x_tran_1, x_dense_1) # TODO -- we want the output to be 640 channels, not 512, as we're concatenating from the previous denseblock, not the transition.
-       
+        x = self.dense_blk_1(x)
+        x = self.tran_blk_1(x)
+        x = self.dense_blk_2(x) 
+        x = self.tran_blk_2(x)
+        x = self.dense_blk_3(x)
+        x = self.tran_blk_3(x)
+        x = self.avgpool_1_out(x)
+        x = torch.flatten(x, start_dim = 1)
+        x = self.fc(x)
+
         return x
 
 class DenseBlock(nn.Module):
@@ -108,25 +145,14 @@ class DenseBlock(nn.Module):
             
             in_channels += k
       
-    def forward(self, x, x_dense = None): 
+    def forward(self, x):
        
-        if x_dense is not None: 
-            outputs = [x_dense]
-        else:
-            outputs = [x] 
+        outputs = [x] 
         
-        for i, layer in enumerate(self.layers):
+        for _, layer in enumerate(self.layers):
           
             input = torch.cat(outputs, dim = 1)
-            
-            if i == 0 and x_dense is not None:
-
-                out = layer(x)  
-           
-            else:
-                
-                out = layer(input)
-
+            out = layer(input)
             outputs.append(out)
         
         return torch.cat(outputs, dim = 1)
@@ -219,6 +245,9 @@ class BasicConv2d(nn.Module):
             padding = padding
             
             )
+      
+        nn.init.kaiming_normal_(self.conv.weight, nonlinearity = 'relu' ) # initializing via kaiming init.
+         
        
     def forward(self, x):
        
