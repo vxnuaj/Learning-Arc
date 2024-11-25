@@ -126,7 +126,7 @@ class SEBlock(nn.Module):
             non_linearity = 'h_sigmoid'
     ):
 
-        reduct_ch = int(in_channels / reduct_ratio)
+        reduct_ch = int(in_channels * reduct_ratio)
 
         self.non_linearity = non_linearity.lower()
 

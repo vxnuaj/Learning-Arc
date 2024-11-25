@@ -8,7 +8,7 @@ x = torch.randn(size = (2, 3, 224, 224))
 
 # init model
 
-model = MobileNetV3Large()
+model = MobileNetV3Large( k = 1000 ) # for 1k imagenet classes
 
 # get model summary and final output shape
 

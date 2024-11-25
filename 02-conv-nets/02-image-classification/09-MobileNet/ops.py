@@ -12,13 +12,19 @@ class BasicConv2d(nn.Module):
         padding = 0,
         groups = 1,
         batch_norm = True,
-        non_linearity = 'h_swish'
+        non_linearity = None
 
     ):
 
         super().__init__()
 
-        self.non_linearity = non_linearity.lower()
+        if non_linearity:
+   
+            self.non_linearity = non_linearity.lower()
+
+        else:
+
+            self.non_linearity = None
 
         self.conv = nn.Conv2d(
 
@@ -39,6 +45,10 @@ class BasicConv2d(nn.Module):
 
             )
 
+        else:
+
+            self.batch_norm = None
+
         if self.non_linearity == 'h_swish':
 
             self.non_linearity = nn.Hardswish()
@@ -47,6 +57,9 @@ class BasicConv2d(nn.Module):
 
             self.non_linearity = nn.ReLU()
 
+        else:
+
+            self.non_linearity = None
 
     def forward(self, x):
 
@@ -56,6 +69,8 @@ class BasicConv2d(nn.Module):
             
             x = self.batch_norm(x)
 
-        x = self.non_linearity(x)
+        if self.non_linearity:
+
+            x = self.non_linearity(x)
 
         return x
