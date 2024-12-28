@@ -16,16 +16,20 @@ Normalized dot product, by the product of the magnitudes of both vectors, yieldi
 
 ```math
 
-\cos \theta = \frac{A \cdot B}{||A|| \cdot ||B||}
+\cos \theta = \frac{\vec{a} \cdot\vec{b}}{||\vec{a}|| \cdot ||\vec{b}||}
 
 ```
 
 where we can get the final angle between both vectors as:
 
 ```math
-\theta = \cos^{-1} \left( \frac{A \cdot B}{||A|| \cdot ||B||} \right) = \cos^{-1}(\cos \theta)
+\theta = \cos^{-1} \left( \frac{\vec{a} \cdot \vec{b}}{||\vec{a}|| \cdot ||\vec{b}||} \right) = \cos^{-1}(\cos \theta)
 
 ```
+
+The closer to $1$ of $\cos \theta$ is, then more similar two vectors are.
+
+The closer to $0$ $\theta$ is, the more similar two vectors are.
 
 ### Singular Values
 

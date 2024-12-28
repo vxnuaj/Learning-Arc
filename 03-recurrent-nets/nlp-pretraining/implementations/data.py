@@ -1,4 +1,4 @@
-# this is for bigram modelling.
+# this is for word2vec models, with window size of 1
 
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
