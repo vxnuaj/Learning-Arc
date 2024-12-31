@@ -3,3 +3,4 @@ data/*
 backlog/*
 backlog
 02-conv-nets/01-foundations/implementations/NumpyConvNet/data
+03-recurrent-nets/nlp-pretraining/implementations/data

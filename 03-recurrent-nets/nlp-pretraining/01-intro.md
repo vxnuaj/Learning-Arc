@@ -83,7 +83,7 @@ which are $\in \mathbb{R}^{n \times 1}$
 
 These embedding vectors are then fed into a language model for training. The final output is decided via a Softmax activation.
 
-Note that in language models, we typically automate the above steps by including an embedding layer with weights $E$, as we need to train the emebddings via gradient descent.
+Note that in language models, we typically automate the above steps by including an embedding layer with weights $E$, as we need to train the embeddings via gradient descent.
 
 The architecture looks as: 
 
@@ -109,7 +109,18 @@ We're able to extract the parameters ($E$) as the embedding matrix, as the model
 
 The embedding matrix then slowly becomes representative of the true embeddings of the vocabulary, given that the model is sufficiently trained to predict the next word.
 
+> Note that this language model can take in input sequences of words larger than $1$ as well, as $n-1$ where $n$ is your context window.
+> 
+> Assume we have two words, represented by the one hot embeddings $\vec{o_1}$ and $\vec{o_2}$. They're separately multiplied with $E$, to extract $\vec{e_1}$ and $\vec{e_2}$. Afterwards, $\vec{e_0}$ and $\vec{e_1}$ are concatenated as:
+>
+> ```math
+> \vec{x} = \begin{bmatrix} \vec{e_1} \\ \vec{e_2} \end{bmatrix} = \begin{bmatrix} e_{11} \\ e_{12} \\ e_{13} \\ e_{21} \\ e_{22} \\ e_{23} \end{bmatrix}
+> ```
+> into a single vector. 
+
 This works if we're explicitly trying to train a language model, to predict the next-word given a context size of $n$, while generating embeddings simultaeneously.
+
+> Note that the neural probabilistic language model can only be trained to a fixed-window size, meaning a specific $n$-gram task at once.
 
 But, if we aren't attempting to train a next-word predictor, we can simply train a model with input context to be **$n$ surrounding words**, **last-1 word**, or **a nearby context word**.
 
@@ -117,30 +128,34 @@ But, if we aren't attempting to train a next-word predictor, we can simply train
 
 ### **Skipgrams** 
 
-Say we have the vocabulary 
+Say we have the sequence:
 
 ```math
 
-V = \{\text{I'm Geoffrey Hinton, the godfather of deep learning.}\}
+S = \{\text{I'm Geoffrey Hinton, the godfather of deep learning.}\}
 ```
 
-with the context word being $\text{godfather}$
+with the center word being $\text{godfather}$, serving as the input to the model.
 
-A skipgram model aims to output the probability for all target words in a vocabulary, $V$, in context of $\text{godfather}$. It's called skipgram as we typically skip a couple of words from the context word to yield a target word.
+> Skipgram takes in a single word as input.
+
+Assume window size (for prediction) is 2 words, $k = 2$.
+
+A skipgram model aims to output the probability for all target words in a vocabulary, $V$ (where $||V|| >> ||S||$), with the goal of correctly predicting the nearest words, in this case with a window size of $2$ -- $\text{the}$ and $\text{of}$. 
 
 ```math
 
-\text{input | godfather } \rightarrow \text{skipgram} \rightarrow \hat{y_i}
+\text{input | godfather } \rightarrow \text{skipgram} \rightarrow \hat{y} \in \mathbb{R}^{|V|} \rightarrow \argmax(\hat{y}) \in \mathbb{R}^{k}
 
 ```
 
-where $y_i$ is the probability for $ith$ target word, $t_i$
+where $\hat{y}$ is the vector modelling the softmax probabilities for the vocabulary $V$, given the center word, "godfather".
 
 More specifically:
 
 ```math
 
-E^To_{\text{godfather}} = e_{\text{godfather}} \rightarrow W^Te_{\text{godfather}} = z \rightarrow \text{softmax(z)} = \hat{y}
+E^To_{\text{godfather}} = e_{\text{godfather}} \rightarrow W^Te_{\text{godfather}} = z \rightarrow \text{softargmax}_{window_{size}}(z) = \hat{y}_{top-k} \in \mathbb{R}^{k}
 
 ```
 
@@ -148,20 +163,59 @@ where
 
 - $E \in \mathbb{R}^{|V| \times n}$ as the embedding matrix ($|V|$ is size of vocab and $n$ is the size of the hidden layer or embedding space.)
 - $W \in \mathbb{R}^{n \times |V|}$
-- $\hat{Y} \in \mathbb{R}^{|V| \times \text{batch}_{\text{size}}}$, the output probability matrix for all words $\in V$
 
-### Hierarchical Softmax
+$W$, during training, gets tuned to represent the context word embeddings, such that the parameters, $E$ and $W$, represent two sets of embedding vectors.
 
-In a very large $V$, the softmax classifier becomes very computationally expensive, especially when computing gradients.
-Given a very large output vector, $\hat{y} \in \mathbb{R}^{|V| \times 1}$, the computation of $\frac{\mathcal{∂L}}{{∂\hat{y}}}$ and some subsequent gradients at earlier layers can become computationally expensive.
+For a more specific explanation onto why,
 
-Instead we can use softmax as a binary tree -- hierarchical softmax -- where each node represents a subset of the vocabulary, $v \in V$ and the root node is a given word.
+Say we're inputting a single embedding vector $\vec{e}$, extracted from $E$, to feed into the matmul with $W^T$.
 
-Say the left node is $v_l$ and the right node is $v_r$.
+Relying on the magnitude of the dot product as an interpretation for similarity (large positive, more similarity between two vectors), the larger the magnitude a given element of the output of the matmul is, the greater the similarity between $\vec{e}$ and a row of the embeddings $W^T$ are (denoted by a larger numerical value relative to other given elements in the output logits). 
 
-At each node of the tree, we compute $\sigma$ or sigmoid activation. If $\sigma(z) < 1$, we go left -- otherwise we go to the right subset.
+From here, it's easy to see how the softmax is able to produce higher $P$ for similar words, as higher $P$ corresponds to a greater logit element in the logit vector, relative to its other elements.
 
-This is done until we reach a root node, where lies the predicted word.
+Given that we're inputting a **center** word for the matmul with $W^T$, during backpropagation, $W^T$ gets trained to recognize the proper weights -- or equivalently embeddings -- for the context words. If dot product with a row of $W^T$ and $\vec{e}$ resulted in a higher logit, leading to an **incorrect** prediction, it's easy to see that the $∂\mathcal{L}$ and correspondingly, the update rule, will change the corresponding row embedding over multiple iterations to a more suitable value.
+
+Then, intuitively, as we're backpropagating the gradient from the hidden layer to the embedding layer, $E$ gets trained to match the context word embeddings, $W$, to get the proper output predictions for the context word, over multiple iterations.
+
+And they must, otherwise the model wouldn't mechanically function well enough to predict the proper context words. This naturally results in $E$ being center word emebddings (as that's our input) and $W$ being context words embeddings.
+
+> Neural networks, are just math.
+
+### CBOW
+
+Unlike Skipgram, CBOW aims to predict the center word give context words.
+
+The input to CBOW models is constructed as:
+
+```math
+
+E^T{O} = \hat{E} \\[3mm] \vec{x} = \frac{1}{k}\sum_{i = 1}^k {\hat{e}}_{i}
+
+```
+
+where $\vec{e_i}$ is the $ith$ vector $\in \hat{E}$, $k$ is the total count of context words, $O \in \mathbb{R}^{|V| \times n}$ is the matrix of one hot embeddings for the input context words ($n$ is the sequence length / context word count), and $E$ is the context word embeddings.
+
+We feed $\vec{x}$ into the hidden layer with weights $W^T$, as:
+
+```math
+
+W^T\vec{x} = Z
+
+```
+
+to then get output probabilities for the center word as $\text{softmax}(Z)$.
+
+Given that we're only predicting a singular center word, we simply extract the predicted word as an $\argmax()$ with $k = 1$.
+
+Just as prior, we can derive the intuitive informal "proof" (because how formal / rigorous can you get with neural nets without insane complexity...) for the construction / training of the embeddings. It works the same way.
+
+### Differences
+
+- CBOW has faster training time (more ∂'s and weight updates)
+- Skipgram has slower training time but can capture better relationships between rare words as the input is the average of relevant $\vec{e_i}$, such that gradients get distributed to correpsonding averaged $\vec{e_i}$'s.
+  
+    > feel free to derive it. great exercise.
 
 ### Negative Sampling
 
@@ -177,7 +231,175 @@ Then, we compute backprop (using binary cross entropy loss) only with respect to
 
 > Note that the gradients for each individual k+1 are summed into a singular gradient vector.
 
+## GloVe
+
+### co-occurence matrices.
+
+Given
+
+- "I like deep learning."
+- "I like NLP."
+- "Deep learning is fun."
+
+The vocabulary $V = \{ \text{I}, \text{like}, \text{deep}, \text{learning}, \text{NLP}, \text{is}, \text{fun} \}$, which has a size of 7.
+
+The context window size is 1, meaning each word in the corpus has its immediate neighbors as context words.
+
+The global co-occurrence matrix $X$ is defined as:
+
+$$
+X_{i,j} = \text{count of how many times word } j \text{ appears in the context of word } i.
+$$
+
+The co-occurrence matrix $M$ is:
+
+```math
+X =
+\begin{pmatrix}
+0 & 2 & 0 & 0 & 0 & 0 & 0 \\
+2 & 0 & 1 & 0 & 1 & 0 & 0 \\
+0 & 1 & 0 & 2 & 0 & 0 & 0 \\
+0 & 0 & 2 & 0 & 0 & 1 & 0 \\
+0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 1 & 0 & 0 & 1 \\
+0 & 0 & 0 & 0 & 0 & 1 & 0
+\end{pmatrix}
+
+```
+
+Where the rows and columns represent the words in the vocabulary in the following order:
+
+
+```math
+
+\text{\{{I,like,deep,learning,NLP,is,fun}\}}
+```
+
+We're essentially mapping how many times word $i$ appears in context of $j$, given the prior sequences defined above.
+
+You can see this in terms of context and target words, where the rows or an $ith$ word is a given target word and columns or the $jth$ word is the context word.
+
+### alg
+
+GloVe makes use of $X$ to optimize the following function:
+
+```math
+
+\min \sum_{i = 1}^{|V|}\sum_{j = 1}^{|V|} f(X_{ij}) (u_j^Tv_i - \log(X_{ij}))^2
+
+```
+
+where
+
+- $|V|$ is the size of the vocabulary
+- $u_j$ is the $j$th column vector $\in U$, the context word embedding matrix
+- $v_i$ is the $i$th row vector $\in V$, the target word embedding matrix.
+- $u_j^Tv_i$ is the predicted co-occurence value for the word pair, $i, j$.
+- $f(X_{ij})$ is a weighted function that equals $0$ if $X_{ij} = 0$ to avoid computing an undefined value when $X_{ij} = 0$ in the $\log$.
+  - $f(X_{ij}) = \left( \frac{X_{ij}}{X_{\text{max}}} \right)^\alpha \quad \text{for} \quad X_{ij} < X_{\text{max}}$
+    - $\alpha$ is a hyperparameter, which yields higher $f$ for higher $\alpha$, alongisade a higher loss value, and inversely for lower $\alpha$.
+  - The function has higher values for more common $X_{ij}$, as it's closer to $X_{max}$ and therefore $f \rightarrow 1$. Inversely the function has lower values for less common $X_{ij}$.
+  - Therefore when we compute the loss for a more common $X_{ij}$ or a more common word such as "the", we'll get a higher value when compared for a more rare $X_{ij} \in V$, such as "Accismus"
+
+This is simply trained via gradient descent and the update rule.
+
+
+## subword embeddings
+
+- 'helps', 'helped', and 'helping' are inflected forms of the same word, 'help'. they are the more complex form of the *lemma*, 'help'.
+- 'dog' and 'dogs' has the same relationship as 'cat' to 'cats'
+- 'girl' and 'girlfriend' has the same relationship as 'boy' and 'boyfriend'
+
+### fasttext
+
+In word2vec, different inflected forms of a given lemma are represented directly by different vectors, without similar parameters. 
+
+Therefore, the relationship between both the lemma and it's various inflected forms (which can span many different words, depennding on the language. for some words, spanish has 40+), which are mapped by the embeddings $\in \mathbb{R}^n$ don't have similarly encoded relationships.
+
+> The same goes for GloVe
+
+There are a few issues with this:
+
+- Treating inflected forms as different vectors can lead to a non-trivial probability $P$ that the inflected forms don't have a high $\frac{\vec{x_1}\vec{x_2}}{||x_1||\cdot||x_2||}$, where $P$ is higher when a given inflected form is less common.
+  - This typically only occurs when the model is trained on sequences where the context doesn't make use of rare inflected forms, such that some $x_i$ get trained but other inflected forms related to $x_i$ don't get trained and end up with a $\cos \theta << 1$
+- Some languages have hundreds or thousands of inflected forms which increases computation / memory requirements for training and storing embeddings, leading to unneeded compelxity.
+
+To use morphological information, meaning the information coming from the form / underlying composition of a given thing, to train embeddings, fastText proposes subword embeddings, where each subword embedding is a sequence of $n$ consecutive characters, strictly a portion of a given word.
+
+To obtain a subword:
+
+- Add '< >' to the end / beginning of the word (surround it).
+- Then extract, character level $n$-grams from the word
+  - if $n = 3$, for the word "embedding" we have, ['<em', 'emb', 'mbe', 'bed', 'edd', 'ddi', 'din', 'ing', 'ng>'] and the special subword "$\text{<}$where$>$" (to be treated as another vector to be trained as an embedding)
+  - Note that $n$ can be any integer. The [paper](https://arxiv.org/pdf/1607.04606) recommends $n \in [3, 6]$.
+  - Say we do have $n \in [3, 6]$ -- fastText will generate all possible subwords for a given word using all $n \in [3,6]$. For example if we have the word "embedding", the following are generated:
+
+    ```math
+
+    \text{Length 3 subwords: }  \{ \langle \text{em}, \text{emb}, \text{mbd}, \text{bdi}, \text{din}, \text{ing}, \text{ng} \rangle \} 
+    \\[3mm]
+    \text{Length 4 subwords: }  \{ \langle \text{emb}, \text{embe}, \text{mbed}, \text{bedd}, \text{eddi}, \text{ddin}, \text{ding}, \text{ing} \rangle \} 
+    \\[3mm]
+    \text{Length 5 subwords: }  \{ \langle \text{embe}, \text{embed}, \text{mbedd}, \text{beddi}, \text{eddin}, \text{dding}, \text{ding} \rangle \} 
+    \\[3mm]
+    \text{Length 6 subwords: }  \{ \langle \text{embed}, \text{embed}, \text{mbeddi}, \text{beddin}, \text{edding}, \text{dding} \rangle \} 
+    \\[3mm]
+    \text{And finally -- "<embedding>"}
+    ```
+
+
+Assume $\mathcal{G}_w$ is the set of all embeddings for a word, including the special subword. $g_i$ is the $i$th subword $\in \mathcal{G}_w$. 
+
+For each input subword, FastText uses a hashing table to extract individual embedding vectors from the embedding matrix, $E$, that correspond with an index extracted by a hashing function, where the input is the subword embedding, $g_i$.
+
+```math
+
+g_i = \text{"<em"}\\[3mm]
+
+\text{index} = \text{hash}(\text{"<em"}) \mod{|V|}
+\\[3mm]
+\text{index} = 12321 \mod{1000} = 321
+\\[3mm]
+e_{<em} = E_{321}
+
+```
+
+where $e_{<em}$ is the input to the model, which then takes the form of a word2vec type embedding model (make sure to use `PYTHONHASHSEED=X python myscript.py`). 
+
+Once we extract all $e_j$ corresponding $g_i$, we'll end up with multiple $e_j$ for a single word $w \in |V|$. If we have the word "embedding" as the input, we have, ['<em', 'emb', 'mbe', 'bed', 'edd', 'ddi', 'din', 'ing', 'ng>'] and the special subword "$\text{<}$where$>$" -- resulting in a set, $\{e_1, e_2, \dots, e_{10}\} = \mathcal{E}_g$. 
+
+We can simply sum over all $e_j$ in the set, $\sum_i^{10} e_i$, to form our final input vector for a single word -- $x_i$
+
+> *Of course, for skipgram, you can immediately input this vector but for CBOW, we have to extract multiple $e_i$ and apply another operation as the average of all extracted $e_i$, $\frac{1}{\text{seq len}}\sum_i^{\text{seq len}} e_i$.*
+
+There's always the possibility that there's a collision in the modulo operation, where multiple values of the $\text{hash}$ function yield a $0$ remainder when divided with $|V|$. 
+
+FastText allows for this by reusing the same embedding vector for multiple subwords -- despite this the algorithm still remians efficient.
+
+I conjecture another possible way to construct without collision could be as follows:
+
+Each word $w$ is represented as a set of character n-grams (subwords) $\mathcal{G}_w$ of lengths between 3 and 6, plus a special subword for the word itself. To create the word's representation, a binary vector $\mathbf{s} \in \mathbb{R}^{|V|}$ where $s_i \in \{0, 1\}$ is constructed, where $V$ is the size of the subword vocabulary, and each index corresponds to a specific subword in $\mathcal{G}_w$. The binary vector $\mathbf{s}$ has a 1 at positions corresponding to the subwords present in the word input and 0 elsewhere. This binary vector is used to select subword embeddings $\mathbf{e}_{s_i}$ from the subword embedding matrix $\mathbf{E}_\text{subwords}$, as a matrix multiplication and the word embedding $\mathbf{e}_w$ is computed as the sum of the selected subword embeddings:
+
+$$
+\mathbf{e}_w = \sum_{s_i \in \mathcal{G}_w} \mathbf{e}_{s_i}
+$$
+
+> This can be easily generalized to sequence length $> 1$ and batch size $> 1$ if you take some time to derive it.
+
+This method enables the model to handle out-of-vocabulary words by decomposing them into subwords and learning embeddings for both subwords and words.
+
+> Though this'd probably require more computation.
+
+### byte pair encoding
+
+The issue with fastText can come when defining $n \in [a, b]$, such that vocabulary $|V|$ can be arbitrary -- and typically unreasonably large.
+
+
+
+- [ ] figure out how byte pair encoding works -- break it down from first principles
+
 ---
+
 
 <br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>
 <br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>
