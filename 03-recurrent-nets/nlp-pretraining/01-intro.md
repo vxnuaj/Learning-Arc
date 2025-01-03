@@ -1,6 +1,5 @@
 # Intro to NLP
 
-- [ ] will be poast???¿ i think so.
 
 ## Word Embeddings
 
